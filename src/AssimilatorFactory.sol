@@ -2,7 +2,7 @@
 pragma solidity ^0.8.7;
 
 import "./assimilators/AssimilatorV2.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./interfaces/IAssimilatorFactory.sol";
 import "./interfaces/IOracle.sol";
 

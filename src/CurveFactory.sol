@@ -21,7 +21,7 @@ import "./Curve.sol";
 
 import "./interfaces/IFreeFromUpTo.sol";
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract CurveFactory is Ownable {
     event NewCurve(address indexed caller, bytes32 indexed id, address indexed curve);

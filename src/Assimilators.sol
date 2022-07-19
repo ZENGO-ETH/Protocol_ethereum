@@ -15,7 +15,7 @@
 
 pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts/utils/Address.sol";
+import "../lib/openzeppelin-contracts/contracts/utils/Address.sol";
 import "./interfaces/IAssimilator.sol";
 import "./lib/ABDKMath64x64.sol";
 
