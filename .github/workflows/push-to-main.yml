@@ -22,4 +22,5 @@ jobs:
           git submodule update --init --recursive
 
       - name: Run forge tests
-        run: ./test.sh -p super_deep
+        # run: ./test.sh -p super_deep
+        run: forge test
