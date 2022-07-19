@@ -29,9 +29,9 @@ contract RouterTest is Test {
 
 
     function test_router() public {
-        // assertEq(uint(1), uint(1));
+        assertEq(uint(1), uint(1));
         // tipEurs(address(this), 69e18);
-        tipToken.eurs(address(this), 69e18);
-        emit log_uint(eurs.balanceOf(address(this)));
+        // tipToken.eurs(address(this), 69e18);
+        // emit log_uint(eurs.balanceOf(address(this)));
     }
 }
