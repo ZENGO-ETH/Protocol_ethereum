@@ -1,7 +1,8 @@
 name: Static Analysis
 on:
   push:
-    branches: "*"
+    branches: 
+      - '**'
 
 jobs:
   build:
@@ -52,4 +53,3 @@ jobs:
         run: |
           slither contracts
         continue-on-error: true
-        
