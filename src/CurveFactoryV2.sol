@@ -18,8 +18,8 @@ pragma experimental ABIEncoderV2;
 
 // Finds new Curves! logs their addresses and provides `isCurve(address) -> (bool)`
 
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "../lib/openzeppelin-contracts/contracts/utils/Address.sol";
+import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 import "./Curve.sol";
 import "./interfaces/IFreeFromUpTo.sol";
