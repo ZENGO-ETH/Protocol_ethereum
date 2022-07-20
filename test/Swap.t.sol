@@ -55,6 +55,8 @@ contract SwapTest is Test {
     AssimilatorFactory assimilatorFactory;
     CurveFactoryV2 curveFactory;
     Curve cadcCurve;
+    Curve eurocCurve;
+    
     CurveInfo curveInfo = CurveInfo(
         name,
         symbol,
