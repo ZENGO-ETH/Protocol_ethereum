@@ -17,7 +17,7 @@ library Mainnet {
     address public constant CHAINLINK_WETH_USD = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     address public constant CHAINLINK_USDC_USD = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6;
 
-    address public constant CHAINLINK_CADC_USD = 0xa34317DB73e77d453b1B8d04550c44D10e981C8e;
+    address public constant CHAINLINK_CAD_USD = 0xa34317DB73e77d453b1B8d04550c44D10e981C8e;
     address public constant CHAINLINK_EUR_USD = 0xb49f677943BC038e9857d61E7d053CaA2C1734C1;
     address public constant CHAINLINK_SGD_USD = 0xe25277fF4bbF9081C75Ab0EB13B4A13a721f3E13;
     
