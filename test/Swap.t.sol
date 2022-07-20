@@ -96,10 +96,17 @@ contract SwapTest is Test {
             LAMBDA            
         );
         
-        deal(address(usdc), address(user1), 1_000_000e6);
-        deal(address(cadc), address(user1), 1_000_000e18);
-        deal(address(euroc), address(user1), 1_000_000e6);
-        deal(address(xsgd), address(user1), 1_000_000e6);
+        deal(address(usdc), address(user1), 300_000_000e6);
+        deal(address(cadc), address(user1), 300_000_000e18);
+        deal(address(euroc), address(user1), 300_000_000e6);
+        deal(address(xsgd), address(user1), 300_000_000e6);
+
+        deal(address(cadc), address(user2), 1_000_000e18);
+
+        cheats.startPrank(address(user2));
+        cadc.approve(address(cadcCurve), type(uint).max);
+        usdc.approve(address(cadcCurve), type(uint).max);
+        cheats.stopPrank();
 
         // TODO: export out
         cheats.startPrank(address(user1));
@@ -108,34 +115,31 @@ contract SwapTest is Test {
         cheats.stopPrank();
 
         cadcCurve.turnOffWhitelisting();
-
-        // user1.call(
-        //     address(cadc),
-        //     abi.encodeWithSelector(
-        //         cadc.approve.selector,
-        //         address(cadcCurve),
-        //         type(uint).max
-        //     )
-        // );
-
-        // user1.call(
-        //     address(usdc),
-        //     abi.encodeWithSelector(
-        //         usdc.approve.selector,
-        //         address(cadcCurve),
-        //         type(uint).max
-        //     )
-        // );
     }
 
 
-    function test_swap() public {
-        // emit log_uint(EURS.balanceOf(address(this)));
-        // emit log_uint(eurs.balanceOf(address(this)));
+    // Fuzzing
+    function test_swap(uint256 tokenAmount) public {
+        // Change decimals
+        cheats.assume(tokenAmount > 1e18);
+        cheats.assume(tokenAmount < 100_000e18);
 
         cheats.prank(address(user1));
-        cadcCurve.deposit(50_000e18, block.timestamp + 60);
-        // compare before
-        // compare after
+        cadcCurve.deposit(1_000_000e18, block.timestamp + 60);
+
+        emit log_uint(cadc.balanceOf(address(cadcCurve)));
+        emit log_uint(usdc.balanceOf(address(cadcCurve)));
+
+        cheats.startPrank(address(user2));
+        cadcCurve.originSwap(Mainnet.CADC, Mainnet.USDC, tokenAmount, 0, block.timestamp + 60);
+
+        emit log_uint(cadc.balanceOf(address(cadcCurve)));
+        emit log_uint(usdc.balanceOf(address(cadcCurve)));
+
+        uint256 user2USDCBal = usdc.balanceOf(address(user2));
+        cadcCurve.originSwap(Mainnet.USDC, Mainnet.CADC, user2USDCBal, 0, block.timestamp + 60);
+
+        emit log_uint(cadc.balanceOf(address(cadcCurve)));
+        emit log_uint(usdc.balanceOf(address(cadcCurve)));
     }
 }
