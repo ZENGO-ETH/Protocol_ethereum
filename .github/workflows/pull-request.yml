@@ -20,4 +20,6 @@ jobs:
 
       - name: Run forge tests
         # run: ./test.sh -p super_deep
-        run: forge test
+        run: |
+          anvil -f https://mainnet.infura.io/v3/406b22e3688c42898054d22555f43271 --fork-block-number 15129966
+          forge test -vvv -f http://127.0.0.1:8545
