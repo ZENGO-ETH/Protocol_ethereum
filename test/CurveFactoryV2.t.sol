@@ -134,32 +134,6 @@ contract CurveFactoryV2Test is Test {
         }
     }
 
-    function testProtocolFee() public {
-
-        cheats.prank(address(users[0]));
-        dfxCurves[0].deposit(1_000_000e18, block.timestamp + 60);
-
-        // send some cadc to users[1]
-        deal(address(cadc),address(users[1]), 100_0e18);
-
-        cheats.startPrank(address(users[1]));
-
-        uint256 swapAmount = cadc.balanceOf(address(users[1]));
-
-        dfxCurves[0].originSwap(Mainnet.CADC, Mainnet.USDC, swapAmount, 0, block.timestamp + 60);
-        uint256 userUsdcBal = usdc.balanceOf(address(users[1]));
-        uint256 treasuryUsdcBal = usdc.balanceOf(address(treasury));
-
-        uint256 newSwapBalance = usdc.balanceOf(address(users[1]));
-        dfxCurves[0].originSwap(Mainnet.USDC, Mainnet.CADC, newSwapBalance, 0, block.timestamp + 60);
-        uint256 userCadcBal = cadc.balanceOf(address(users[1]));
-        uint256 treasuryCadcBal = cadc.balanceOf(address(treasury));
-
-        uint256 feeRatio = totalPercentage.div(DefaultCurve.EPSILON);
-        uint256 balanceRatio = (userUsdcBal + treasuryUsdcBal).div(treasuryUsdcBal).div(2);
-        assertApproxEqAbs( feeRatio, balanceRatio, feeRatio.div(25));
-    }
-
     function testFailSwapDiff() public {
         
         cheats.prank(address(users[0]));
