@@ -104,19 +104,21 @@ contract CurveFactoryV2Test is Test {
         gold.mint(address(depositor), mintAmt.mul(goldDecimals));
         silver.mint(address(depositor), mintAmt.mul(silverDecimals));
         // mint only 1k gold tokens 
-        gold.mint(address(trader), 4 * goldDecimals);
+        
         // now approve
         cheats.startPrank(address(depositor));
-        gold.approve(address(goldSilverCurve), type(uint).max);
-        silver.approve(address(goldSilverCurve), type(uint).max);
-        cheats.stopPrank();
-        cheats.startPrank(address(trader));
         gold.approve(address(goldSilverCurve), type(uint).max);
         silver.approve(address(goldSilverCurve), type(uint).max);
         cheats.stopPrank();
     }
 
     function testSwap () public {
+        // mint gold to trader
+        gold.mint(address(trader), 4 * goldDecimals);
+        cheats.startPrank(address(trader));
+        gold.approve(address(goldSilverCurve), type(uint).max);
+        silver.approve(address(goldSilverCurve), type(uint).max);
+        cheats.stopPrank();
         // first deposit
         cheats.startPrank(address(depositor));
         goldSilverCurve.deposit(10000000 * goldDecimals, block.timestamp + 60);
@@ -133,5 +135,45 @@ contract CurveFactoryV2Test is Test {
         );
         uint256 currentSilverBal = silver.balanceOf(address(trader));
         cheats.stopPrank();
+        uint256 goldTokenDec = gold.decimals();
+        uint256 silverTokenDec = silver.decimals();
+        uint256 balanceRatio = (
+            currentSilverBal.mul(1000).div(silverTokenDec).mul(goldTokenDec).div(originalGoldBal)
+        );
+        assertApproxEqAbs(balanceRatio, 6 * 1000, balanceRatio.div(100));
+    }
+
+    function testSwapFuzz(uint256 amt) public {
+        cheats.assume(amt > 0);
+        cheats.assume(amt < 100000);
+        // mint gold to trader
+        gold.mint(address(trader), amt * goldDecimals);
+        cheats.startPrank(address(trader));
+        gold.approve(address(goldSilverCurve), type(uint).max);
+        silver.approve(address(goldSilverCurve), type(uint).max);
+        cheats.stopPrank();
+        // first deposit
+        cheats.startPrank(address(depositor));
+        goldSilverCurve.deposit(10000000 * goldDecimals, block.timestamp + 60);
+        cheats.stopPrank();
+        cheats.startPrank(address(trader));
+        uint256 originalGoldBal = gold.balanceOf(address(trader));
+        // now swap gold to silver
+        goldSilverCurve.originSwap(
+            address(gold),
+            address(silver), 
+            originalGoldBal,
+            0,
+            block.timestamp + 60
+        );
+        uint256 currentSilverBal = silver.balanceOf(address(trader));
+        cheats.stopPrank();
+        uint256 goldTokenDec = gold.decimals();
+        uint256 silverTokenDec = silver.decimals();
+        uint256 balanceRatio = (
+            currentSilverBal.mul(1000).div(silverTokenDec).mul(goldTokenDec).div(originalGoldBal)
+        );
+        // price ratio is 6:1, balance ration also needs to be approx 6:1
+        assertApproxEqAbs(balanceRatio, 6 * 1000, balanceRatio.div(100));
     }
 }
