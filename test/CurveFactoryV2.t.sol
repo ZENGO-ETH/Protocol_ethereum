@@ -18,188 +18,162 @@ import "./lib/MockUser.sol";
 import "./lib/CheatCodes.sol";
 import "./lib/Address.sol";
 import "./lib/CurveParams.sol";
+import "./lib/MockChainlinkOracle.sol";
+import "./lib/MockOracleFactory.sol";
+import "./lib/MockToken.sol";
 
 import "./utils/Utils.sol";
 
 contract CurveFactoryV2Test is Test {
     using SafeMath for uint256;
 
-    uint256 public totalPercentage = 1e18;
-
     CheatCodes cheats = CheatCodes(HEVM_ADDRESS);
     Utils utils;
-    MockUser treasury;
 
-    MockUser[2] public users;
+    MockUser public depositor;
+    MockUser public trader;
+    MockUser public treasury;
 
-    IERC20Detailed usdc = IERC20Detailed(Mainnet.USDC);
-    IERC20Detailed cadc = IERC20Detailed(Mainnet.CADC);
-    IERC20Detailed xsgd = IERC20Detailed(Mainnet.XSGD);
-    IERC20Detailed euroc = IERC20Detailed(Mainnet.EUROC);
+    MockToken gold;
+    MockToken silver;
 
-    uint8 constant fxTokenCount = 3;
-    // USDC always last so that the array does not clash
-    IERC20Detailed[] public foreignStables = [
-        cadc,
-        xsgd, 
-        euroc, 
-        usdc
-    ];
+    MockOracleFactory oracleFactory;
+    MockChainlinkOracle goldOracle;
+    MockChainlinkOracle silverOracle;
 
-    IOracle usdcOracle = IOracle(Mainnet.CHAINLINK_USDC_USD);
-    IOracle cadcOracle = IOracle(Mainnet.CHAINLINK_CAD_USD);
-    IOracle xsgdOracle = IOracle(Mainnet.CHAINLINK_SGD_USD);
-    IOracle eurocOracle = IOracle(Mainnet.CHAINLINK_EUR_USD);
-
-    IOracle[] public foreignOracles = [
-        cadcOracle,
-        xsgdOracle,
-        eurocOracle,
-        usdcOracle
-    ];
-    
-    int128 public protocolFee = 50;
-
-    AssimilatorFactory assimilatorFactory;
+    Curve goldSilverCurve;
     CurveFactoryV2 curveFactory;
-    Curve[fxTokenCount] dfxCurves;
+    AssimilatorFactory assimFactory;
+    uint256 public goldDecimals;
+    uint256 public silverDecimals;
 
     function setUp() public {
-        treasury = new MockUser();
+
         utils = new Utils();
+        depositor = new MockUser();
+        trader = new MockUser();
+        treasury = new MockUser();
 
-        for (uint8 i = 0; i < users.length; i++) {
-            users[i] = new MockUser();
-        }
+        gold = new MockToken();
+        silver = new MockToken();
 
-        assimilatorFactory = new AssimilatorFactory();
-        
-        curveFactory = new CurveFactoryV2(
-            protocolFee,
-            address(treasury),
-            address(assimilatorFactory)
+        oracleFactory = new MockOracleFactory();
+        // gold : silver usd ratio is 6 : 1
+        // decimal is 6, usd price is $15
+        goldOracle = oracleFactory.newOracle(
+            address(gold), "goldOracle",6, 15000000
         );
+        // decimal is 4, usd price is $2.5
+        silverOracle = oracleFactory.newOracle(
+            address(silver), "silverOracle", 4, 25000
+        );
+
+        assimFactory = new AssimilatorFactory();
+        curveFactory = new CurveFactoryV2(
+            50, address(treasury), address(assimFactory)
+        );
+        assimFactory.setCurveFactory(address(curveFactory));
+
+        CurveInfo memory curveInfo = CurveInfo(
+            "dfx-gold-silver",
+            "dgs",
+            address(gold),
+            address(silver),
+            DefaultCurve.BASE_WEIGHT,
+            DefaultCurve.QUOTE_WEIGHT,
+            address(goldOracle),
+            gold.decimals(),
+            address(silverOracle),
+            silver.decimals()
+        );
+        goldSilverCurve = curveFactory.newCurve(curveInfo);
+        goldSilverCurve.setParams(
+            DefaultCurve.ALPHA,
+            DefaultCurve.BETA,
+            DefaultCurve.MAX,
+            DefaultCurve.EPSILON,
+            DefaultCurve.LAMBDA
+        );
+        goldSilverCurve.turnOffWhitelisting();
+
+        // now mint gold & silver tokens
+        uint256 mintAmt = 300_000_000;
+        goldDecimals = utils.tenToPowerOf(gold.decimals());
+        silverDecimals = utils.tenToPowerOf(silver.decimals());
+
+        gold.mint(address(depositor), mintAmt.mul(goldDecimals));
+        silver.mint(address(depositor), mintAmt.mul(silverDecimals));
+        // mint only 1k gold tokens 
         
-        assimilatorFactory.setCurveFactory(address(curveFactory));
-        
-        for (uint8 i = 0; i < fxTokenCount; i++) {
-            CurveInfo memory curveInfo = CurveInfo(
-                string.concat("dfx-", foreignStables[i].name()),
-                string.concat("dfx-", foreignStables[i].symbol()),
-                address(foreignStables[i]),
-                address(usdc),
-                DefaultCurve.BASE_WEIGHT,
-                DefaultCurve.QUOTE_WEIGHT,
-                address(foreignOracles[i]),
-                foreignStables[i].decimals(),
-                address(usdcOracle),
-                usdc.decimals()
-            );
-
-            dfxCurves[i] = curveFactory.newCurve(curveInfo);
-            dfxCurves[i].setParams(
-                DefaultCurve.ALPHA,
-                DefaultCurve.BETA,
-                DefaultCurve.MAX,
-                DefaultCurve.EPSILON,
-                DefaultCurve.LAMBDA
-            );
-
-            dfxCurves[i].turnOffWhitelisting();
-        }
-
-        // Mint Tokens for Mock Users
-        uint256 user1TknAmnt = 300_000_000;
-        uint256 user2TknAmnt = 0;
-
-        // Mint Foreign Stables
-        for (uint8 i = 0; i < foreignStables.length; i++) {
-            uint256 decimals = utils.tenToPowerOf(foreignStables[i].decimals());
-            deal(address(foreignStables[i]), address(users[0]), user1TknAmnt.mul(decimals));
-            deal(address(foreignStables[i]), address(users[1]), user2TknAmnt.mul(decimals));
-        }
-
-        // Mint USDC
-        deal(address(usdc), address(users[0]), user1TknAmnt.mul(utils.tenToPowerOf(usdc.decimals())));
-
-        // Infinite Approvals
-        for (uint8 i = 0; i < users.length; i++) {
-            // Prentending to be a user
-            cheats.startPrank(address(users[i]));
-            for (uint8 j = 0; j < fxTokenCount; j++) {            
-                foreignStables[j].approve(address(dfxCurves[j]), type(uint).max);
-                usdc.approve(address(dfxCurves[j]), type(uint).max);
-            }
-            cheats.stopPrank();
-        }
+        // now approve
+        cheats.startPrank(address(depositor));
+        gold.approve(address(goldSilverCurve), type(uint).max);
+        silver.approve(address(goldSilverCurve), type(uint).max);
+        cheats.stopPrank();
     }
 
-    function testProtocolFee() public {
-
-        cheats.prank(address(users[0]));
-        dfxCurves[0].deposit(1_000_000e18, block.timestamp + 60);
-        console.log(usdc.balanceOf(address(dfxCurves[0])));
-        console.log(cadc.balanceOf(address(dfxCurves[0])));
-
-        // send some cadc to users[1]
-        deal(address(cadc),address(users[1]), 190_000e18);
-
-        cheats.startPrank(address(users[1]));
-
-        uint256 swapAmount = cadc.balanceOf(address(users[1]));
-
-        // console.log(usdc.balanceOf(address(treasury)));
-        dfxCurves[0].originSwap(Mainnet.CADC, Mainnet.USDC, swapAmount, 0, block.timestamp + 60);
-        uint256 userUsdcBal = usdc.balanceOf(address(users[1]));
-        uint256 treasuryUsdcBal = usdc.balanceOf(address(treasury));
-        // console.log(swapAmount);
-        // console.log(userUsdcBal);
-        // console.log(treasuryUsdcBal);
-
-        uint256 newSwapBalance = usdc.balanceOf(address(users[1]));
-        console.log(newSwapBalance);
-        dfxCurves[0].originSwap(Mainnet.USDC, Mainnet.CADC, newSwapBalance, 0, block.timestamp + 60);
-        uint256 userCadcBal = cadc.balanceOf(address(users[1]));
-        uint256 treasuryCadcBal = cadc.balanceOf(address(treasury));
-
-        uint256 feeRatio = totalPercentage.div(DefaultCurve.EPSILON);
-        uint256 balanceRatio = (userUsdcBal + treasuryUsdcBal).div(treasuryUsdcBal).div(2);
+    function testSwap () public {
+        // mint gold to trader
+        gold.mint(address(trader), 4 * goldDecimals);
+        cheats.startPrank(address(trader));
+        gold.approve(address(goldSilverCurve), type(uint).max);
+        silver.approve(address(goldSilverCurve), type(uint).max);
+        cheats.stopPrank();
+        // first deposit
+        cheats.startPrank(address(depositor));
+        goldSilverCurve.deposit(10000000 * goldDecimals, block.timestamp + 60);
+        cheats.stopPrank();
+        cheats.startPrank(address(trader));
+        uint256 originalGoldBal = gold.balanceOf(address(trader));
+        // now swap gold to silver
+        goldSilverCurve.originSwap(
+            address(gold),
+            address(silver), 
+            originalGoldBal,
+            0,
+            block.timestamp + 60
+        );
+        uint256 currentSilverBal = silver.balanceOf(address(trader));
+        cheats.stopPrank();
+        uint256 goldTokenDec = gold.decimals();
+        uint256 silverTokenDec = silver.decimals();
+        uint256 balanceRatio = (
+            currentSilverBal.mul(1000).div(silverTokenDec).mul(goldTokenDec).div(originalGoldBal)
+        );
+        assertApproxEqAbs(balanceRatio, 6 * 1000, balanceRatio.div(100));
     }
 
-    function testFailSwapDiff() public {
-        
-        cheats.prank(address(users[0]));
-        dfxCurves[0].deposit(1_000_000e18, block.timestamp + 60);
-
-        // send some cadc to users[1]
-        deal(address(cadc),address(users[1]), 200_000e18);
-
-        cheats.startPrank(address(users[1]));
-        uint256 originalBal = cadc.balanceOf(address(users[1]));
-        uint256 swapAmount = cadc.balanceOf(address(users[1]));
-        dfxCurves[0].originSwap(Mainnet.CADC, Mainnet.USDC, swapAmount, 0, block.timestamp + 60);
-        uint256 newSwapBalance = usdc.balanceOf(address(users[1]));
-        dfxCurves[0].originSwap(Mainnet.USDC, Mainnet.CADC, newSwapBalance, 0, block.timestamp + 60);
-        uint256 newlBal = cadc.balanceOf(address(users[1]));
-        assertApproxEqAbs(originalBal, newlBal, originalBal.div(10000));
-    }
-
-    function testSwapDiff(uint256 mintAmount) public {
-        cheats.assume(mintAmount > 1e18);
-        cheats.assume(mintAmount < 200_000e18);
-        cheats.prank(address(users[0]));
-        dfxCurves[0].deposit(1_000_000e18, block.timestamp + 60);
-
-        // send some cadc to users[1]
-        deal(address(cadc),address(users[1]), mintAmount);
-
-        cheats.startPrank(address(users[1]));
-        uint256 originalBal = cadc.balanceOf(address(users[1]));
-        uint256 swapAmount = cadc.balanceOf(address(users[1]));
-        dfxCurves[0].originSwap(Mainnet.CADC, Mainnet.USDC, swapAmount, 0, block.timestamp + 60);
-        uint256 newSwapBalance = usdc.balanceOf(address(users[1]));
-        dfxCurves[0].originSwap(Mainnet.USDC, Mainnet.CADC, newSwapBalance, 0, block.timestamp + 60);
-        uint256 newlBal = cadc.balanceOf(address(users[1]));
-        assertApproxEqAbs(originalBal, newlBal, originalBal.div(1000));
+    function testSwapFuzz(uint256 amt) public {
+        cheats.assume(amt > 0);
+        cheats.assume(amt < 100000);
+        // mint gold to trader
+        gold.mint(address(trader), amt * goldDecimals);
+        cheats.startPrank(address(trader));
+        gold.approve(address(goldSilverCurve), type(uint).max);
+        silver.approve(address(goldSilverCurve), type(uint).max);
+        cheats.stopPrank();
+        // first deposit
+        cheats.startPrank(address(depositor));
+        goldSilverCurve.deposit(10000000 * goldDecimals, block.timestamp + 60);
+        cheats.stopPrank();
+        cheats.startPrank(address(trader));
+        uint256 originalGoldBal = gold.balanceOf(address(trader));
+        // now swap gold to silver
+        goldSilverCurve.originSwap(
+            address(gold),
+            address(silver), 
+            originalGoldBal,
+            0,
+            block.timestamp + 60
+        );
+        uint256 currentSilverBal = silver.balanceOf(address(trader));
+        cheats.stopPrank();
+        uint256 goldTokenDec = gold.decimals();
+        uint256 silverTokenDec = silver.decimals();
+        uint256 balanceRatio = (
+            currentSilverBal.mul(1000).div(silverTokenDec).mul(goldTokenDec).div(originalGoldBal)
+        );
+        // price ratio is 6:1, balance ration also needs to be approx 6:1
+        assertApproxEqAbs(balanceRatio, 6 * 1000, balanceRatio.div(100));
     }
 }
