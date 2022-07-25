@@ -21,6 +21,7 @@ import "../../lib/openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
 import "../lib/ABDKMath64x64.sol";
 import "../interfaces/IAssimilator.sol";
 import "../interfaces/IOracle.sol";
+import "../../lib/forge-std/src/console.sol";
 
 contract AssimilatorV2 is IAssimilator {
     using ABDKMath64x64 for int128;

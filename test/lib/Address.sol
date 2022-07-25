@@ -11,11 +11,13 @@ library Mainnet {
     address public constant CADC = 0xcaDC0acd4B445166f12d2C07EAc6E2544FbE2Eef;
     address public constant EUROC = 0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c;
     address public constant XSGD = 0x70e8dE73cE538DA2bEEd35d14187F6959a8ecA96;
+    address public constant NZDS = 0xDa446fAd08277B4D2591536F204E018f32B6831c;
 
     // Oracles
     // 8-decimals
     address public constant CHAINLINK_WETH_USD = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     address public constant CHAINLINK_USDC_USD = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6;
+    address public constant CHAINLINK_NZDS_USD = 0x3977CFc9e4f29C184D4675f4EB8e0013236e5f3e;
 
     address public constant CHAINLINK_CAD_USD = 0xa34317DB73e77d453b1B8d04550c44D10e981C8e;
     address public constant CHAINLINK_EUR_USD = 0xb49f677943BC038e9857d61E7d053CaA2C1734C1;

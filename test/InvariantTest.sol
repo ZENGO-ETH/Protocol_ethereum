@@ -21,7 +21,7 @@ import "./lib/CurveParams.sol";
 
 import "./utils/Utils.sol";
 
-contract CurveFactoryV2Test is Test {
+contract InvariantTest is Test {
     using SafeMath for uint256;
 
     uint256 public totalPercentage = 1e18;
@@ -36,18 +36,21 @@ contract CurveFactoryV2Test is Test {
     IERC20Detailed cadc = IERC20Detailed(Mainnet.CADC);
     IERC20Detailed xsgd = IERC20Detailed(Mainnet.XSGD);
     IERC20Detailed euroc = IERC20Detailed(Mainnet.EUROC);
+    IERC20Detailed nzds = IERC20Detailed(Mainnet.NZDS);
 
-    uint8 constant fxTokenCount = 3;
+    uint8 constant fxTokenCount = 4;
     // USDC always last so that the array does not clash
     IERC20Detailed[] public foreignStables = [
         cadc,
         xsgd, 
         euroc, 
+        nzds,
         usdc
     ];
 
     IOracle usdcOracle = IOracle(Mainnet.CHAINLINK_USDC_USD);
     IOracle cadcOracle = IOracle(Mainnet.CHAINLINK_CAD_USD);
+    IOracle nzdsOracle = IOracle(Mainnet.CHAINLINK_NZDS_USD);
     IOracle xsgdOracle = IOracle(Mainnet.CHAINLINK_SGD_USD);
     IOracle eurocOracle = IOracle(Mainnet.CHAINLINK_EUR_USD);
 
@@ -55,6 +58,7 @@ contract CurveFactoryV2Test is Test {
         cadcOracle,
         xsgdOracle,
         eurocOracle,
+        nzdsOracle,
         usdcOracle
     ];
     
@@ -134,72 +138,29 @@ contract CurveFactoryV2Test is Test {
         }
     }
 
-    function testProtocolFee() public {
+    function testInvariant() public {
 
         cheats.prank(address(users[0]));
-        dfxCurves[0].deposit(1_000_000e18, block.timestamp + 60);
-        console.log(usdc.balanceOf(address(dfxCurves[0])));
-        console.log(cadc.balanceOf(address(dfxCurves[0])));
+        dfxCurves[3].deposit(10000e18, block.timestamp + 60);
+        console.log(usdc.balanceOf(address(dfxCurves[3])));
+        console.log(nzds.balanceOf(address(dfxCurves[3])));
 
         // send some cadc to users[1]
-        deal(address(cadc),address(users[1]), 190_000e18);
+        deal(address(nzds),address(users[1]), 1900e6);
 
         cheats.startPrank(address(users[1]));
 
-        uint256 swapAmount = cadc.balanceOf(address(users[1]));
+        uint256 swapAmount = nzds.balanceOf(address(users[1]));
 
         // console.log(usdc.balanceOf(address(treasury)));
-        dfxCurves[0].originSwap(Mainnet.CADC, Mainnet.USDC, swapAmount, 0, block.timestamp + 60);
+        dfxCurves[3].originSwap(Mainnet.NZDS, Mainnet.USDC, swapAmount, 0, block.timestamp + 60);
         uint256 userUsdcBal = usdc.balanceOf(address(users[1]));
         uint256 treasuryUsdcBal = usdc.balanceOf(address(treasury));
-        // console.log(swapAmount);
-        // console.log(userUsdcBal);
-        // console.log(treasuryUsdcBal);
-
-        uint256 newSwapBalance = usdc.balanceOf(address(users[1]));
-        console.log(newSwapBalance);
-        dfxCurves[0].originSwap(Mainnet.USDC, Mainnet.CADC, newSwapBalance, 0, block.timestamp + 60);
-        uint256 userCadcBal = cadc.balanceOf(address(users[1]));
-        uint256 treasuryCadcBal = cadc.balanceOf(address(treasury));
-
-        uint256 feeRatio = totalPercentage.div(DefaultCurve.EPSILON);
-        uint256 balanceRatio = (userUsdcBal + treasuryUsdcBal).div(treasuryUsdcBal).div(2);
-    }
-
-    function testFailSwapDiff() public {
+        cheats.stopPrank();
         
         cheats.prank(address(users[0]));
-        dfxCurves[0].deposit(1_000_000e18, block.timestamp + 60);
+        dfxCurves[3].deposit(990_000e18, block.timestamp + 60);
 
-        // send some cadc to users[1]
-        deal(address(cadc),address(users[1]), 200_000e18);
-
-        cheats.startPrank(address(users[1]));
-        uint256 originalBal = cadc.balanceOf(address(users[1]));
-        uint256 swapAmount = cadc.balanceOf(address(users[1]));
-        dfxCurves[0].originSwap(Mainnet.CADC, Mainnet.USDC, swapAmount, 0, block.timestamp + 60);
-        uint256 newSwapBalance = usdc.balanceOf(address(users[1]));
-        dfxCurves[0].originSwap(Mainnet.USDC, Mainnet.CADC, newSwapBalance, 0, block.timestamp + 60);
-        uint256 newlBal = cadc.balanceOf(address(users[1]));
-        assertApproxEqAbs(originalBal, newlBal, originalBal.div(10000));
     }
 
-    function testSwapDiff(uint256 mintAmount) public {
-        cheats.assume(mintAmount > 1e18);
-        cheats.assume(mintAmount < 200_000e18);
-        cheats.prank(address(users[0]));
-        dfxCurves[0].deposit(1_000_000e18, block.timestamp + 60);
-
-        // send some cadc to users[1]
-        deal(address(cadc),address(users[1]), mintAmount);
-
-        cheats.startPrank(address(users[1]));
-        uint256 originalBal = cadc.balanceOf(address(users[1]));
-        uint256 swapAmount = cadc.balanceOf(address(users[1]));
-        dfxCurves[0].originSwap(Mainnet.CADC, Mainnet.USDC, swapAmount, 0, block.timestamp + 60);
-        uint256 newSwapBalance = usdc.balanceOf(address(users[1]));
-        dfxCurves[0].originSwap(Mainnet.USDC, Mainnet.CADC, newSwapBalance, 0, block.timestamp + 60);
-        uint256 newlBal = cadc.balanceOf(address(users[1]));
-        assertApproxEqAbs(originalBal, newlBal, originalBal.div(1000));
-    }
 }
