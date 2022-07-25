@@ -21,7 +21,7 @@ import "./lib/CurveParams.sol";
 
 import "./utils/Utils.sol";
 
-contract CurveFactoryV2Test is Test {
+contract SwapDiffTest is Test {
     using SafeMath for uint256;
 
     uint256 public totalPercentage = 1e18;
@@ -149,7 +149,7 @@ contract CurveFactoryV2Test is Test {
         uint256 newSwapBalance = usdc.balanceOf(address(users[1]));
         dfxCurves[0].originSwap(Mainnet.USDC, Mainnet.CADC, newSwapBalance, 0, block.timestamp + 60);
         uint256 newlBal = cadc.balanceOf(address(users[1]));
-        assertApproxEqAbs(originalBal, newlBal, originalBal.div(10000));
+        assertApproxEqAbs(originalBal, newlBal, originalBal.div(1000000));
     }
 
     function testSwapDiff(uint256 mintAmount) public {
