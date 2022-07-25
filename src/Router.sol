@@ -18,10 +18,10 @@ pragma solidity ^0.8.7;
 import "./CurveFactory.sol";
 import "./Curve.sol";
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "../lib/contracts/utils/math/SafeMath.sol";
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 // Simplistic router that assumes USD is the only quote currency for
 contract Router {
