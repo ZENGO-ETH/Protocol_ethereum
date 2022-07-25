@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.13;
 pragma experimental ABIEncoderV2;
 
 import "../lib/openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
@@ -132,9 +132,9 @@ contract Zap {
         require(lpAmount >= _minLPAmount, "!Zap/not-enough-lp-amount");
 
         // Transfer all remaining balances back to user
-        IERC20(_curve).transfer(msg.sender, IERC20(_curve).balanceOf(address(this)));
-        IERC20(base).transfer(msg.sender, IERC20(base).balanceOf(address(this)));
-        USDC.transfer(msg.sender, USDC.balanceOf(address(this)));
+        IERC20(_curve).safeTransfer(msg.sender, IERC20(_curve).balanceOf(address(this)));
+        IERC20(base).safeTransfer(msg.sender, IERC20(base).balanceOf(address(this)));
+        USDC.safeTransfer(msg.sender, USDC.balanceOf(address(this)));
 
         return lpAmount;
     }
