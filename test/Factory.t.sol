@@ -13,7 +13,7 @@ import "./lib/CheatCodes.sol";
 import "./lib/Address.sol";
 import "./lib/CurveParams.sol";
 
-contract FactoryTest is Test {
+contract CurveFactoryV2Test is Test {
     CheatCodes cheats = CheatCodes(HEVM_ADDRESS);
     MockUser treasury;
     MockUser newTreasury;
