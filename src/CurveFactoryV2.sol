@@ -82,8 +82,8 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
         emit ProtocolFeeUpdated(protocolTreasury, protocolFee);
     }
 
-    function getCurve(address _token) external view returns (address) {
-        bytes32 curveId = keccak256(abi.encode(_token));
+    function getCurve(address _baseCurrency, address _quoteCurrency) external view returns (address) {
+        bytes32 curveId = keccak256(abi.encode(_baseCurrency, _quoteCurrency));
         return (curves[curveId]);
     }
 
