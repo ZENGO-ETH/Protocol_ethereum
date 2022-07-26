@@ -163,4 +163,30 @@ contract InvariantTest is Test {
 
     }
 
+    function testInvariantFuzz(uint256 amount) public {
+        cheats.assume(amount > 0);
+        cheats.assume(amount < 900e6);
+        cheats.prank(address(users[0]));
+        dfxCurves[3].deposit(10000e18, block.timestamp + 60);
+        console.log(usdc.balanceOf(address(dfxCurves[3])));
+        console.log(nzds.balanceOf(address(dfxCurves[3])));
+
+        // send some cadc to users[1]
+        deal(address(nzds),address(users[1]), 1900e6);
+
+        cheats.startPrank(address(users[1]));
+
+        uint256 swapAmount = nzds.balanceOf(address(users[1]));
+
+        // console.log(usdc.balanceOf(address(treasury)));
+        dfxCurves[3].originSwap(Mainnet.NZDS, Mainnet.USDC, swapAmount, 0, block.timestamp + 60);
+        uint256 userUsdcBal = usdc.balanceOf(address(users[1]));
+        uint256 treasuryUsdcBal = usdc.balanceOf(address(treasury));
+        cheats.stopPrank();
+        
+        cheats.prank(address(users[0]));
+        dfxCurves[3].deposit(990_000e18, block.timestamp + 60);
+
+    }
+
 }
