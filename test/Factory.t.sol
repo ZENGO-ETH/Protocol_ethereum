@@ -16,6 +16,7 @@ import "./lib/CurveParams.sol";
 contract FactoryTest is Test {
     CheatCodes cheats = CheatCodes(HEVM_ADDRESS);
     MockUser treasury;
+    MockUser newTreasury;
 
     AssimilatorFactory assimilatorFactory;
     CurveFactoryV2 curveFactory;
@@ -35,6 +36,7 @@ contract FactoryTest is Test {
 
     function setUp() public {
         treasury = new MockUser();
+        newTreasury = new MockUser();
 
         assimilatorFactory = new AssimilatorFactory();
         curveFactory = new CurveFactoryV2(
@@ -102,14 +104,33 @@ contract FactoryTest is Test {
         dfxEurocCurve = curveFactory.newCurve(curveInfo);
 
         address curve0 = curveFactory.getCurve(Mainnet.CADC, Mainnet.USDC);
-        // address curve1 = curveFactory.getCurve(keccak256(abi.encode(Mainnet.EUROC, Mainnet.USDC)));
+        address curve1 = curveFactory.getCurve(Mainnet.EUROC, Mainnet.USDC);
 
         assertEq(curve0, address(dfxCadcCurve));
-        // assertEq(curve1, address(dfxCadcCurve));
+        assertEq(curve1, address(dfxEurocCurve));
     }
 
-}
+    function testUpdateFee() public {
+        int128 newFee = 100;
+        curveFactory.updateProtocolFee(newFee);
+        assertEq(newFee, curveFactory.getProtocolFee());
+    }
 
-// No duplicate pairs
-// No duplicate assims
-// 
+    function testFailUpdateFee() public {
+        int128 newFee = 101;
+        curveFactory.updateProtocolFee(newFee);
+        fail("CurveFactory/currency-pair-already-exists");
+    }
+
+    function testUpdateTreasury() public {
+        assertEq(address(treasury), curveFactory.getProtocolTreasury());
+        curveFactory.updateProtocolTreasury(address(newTreasury));
+        assertEq(address(newTreasury), curveFactory.getProtocolTreasury());
+    }
+
+    function testFailUpdateTreasury() public {
+        assertEq(address(treasury), curveFactory.getProtocolTreasury());
+        curveFactory.updateProtocolTreasury(address(newTreasury));
+        fail("CurveFactory/currency-pair-already-exists");
+    }
+}
