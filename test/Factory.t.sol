@@ -101,7 +101,7 @@ contract FactoryTest is Test {
         );
         dfxEurocCurve = curveFactory.newCurve(curveInfo);
 
-        address curve0 = curveFactory.getCurve(Mainnet.CADC);
+        address curve0 = curveFactory.getCurve(Mainnet.CADC, Mainnet.USDC);
         // address curve1 = curveFactory.getCurve(keccak256(abi.encode(Mainnet.EUROC, Mainnet.USDC)));
 
         assertEq(curve0, address(dfxCadcCurve));
