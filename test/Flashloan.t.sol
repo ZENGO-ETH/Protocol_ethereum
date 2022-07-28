@@ -144,8 +144,8 @@ contract FlashloanTest is Test {
         // cheats.prank(address(users[0]));
         // CADC -> USDC
         // emit log_uint(router. viewOriginSwap(Mainnet.USDC, Mainnet.XSGD, Mainnet.CADC, 900e6));
-        // emit log_uint(IERC20(Mainnet.CADC).balanceOf(address(dfxCurves[0])));
-        // emit log_uint(IERC20(Mainnet.USDC).balanceOf(address(dfxCurves[0])));
+        emit log_uint(IERC20(Mainnet.CADC).balanceOf(address(dfxCurves[0])));
+        emit log_uint(IERC20(Mainnet.USDC).balanceOf(address(dfxCurves[0])));
 
         (uint256 bal1, uint256 bal2) = dfxCurves[0].flash(address(flashloaner), 1e6, 1e6);
         emit log_uint(bal1);
