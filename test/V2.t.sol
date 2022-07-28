@@ -215,4 +215,24 @@ contract V2Test is Test {
         cheats.stopPrank();
     }
 
+    function testInvariant () public {
+        cheats.startPrank(address(depositor));
+        goldSilverCurve.deposit(10000000 * goldDecimals, block.timestamp + 60);
+        cheats.stopPrank();
+        uint256 poolGoldBal = gold.balanceOf(address(goldSilverCurve));
+        uint256 poolSilverBal = silver.balanceOf(address(goldSilverCurve));
+        console.logUint(poolGoldBal);
+        // mint some % of goldBal of the pool to the trader to swap
+        gold.mint(address(trader),  poolGoldBal);
+        silver.mint(address(trader), poolSilverBal);
+        // now deposit huge amount to the pool
+        console.logUint(gold.balanceOf(address(trader)));
+        console.logUint(silver.balanceOf(address(trader)));
+        cheats.startPrank(address(trader));
+        gold.approve(address(goldSilverCurve), type(uint).max);
+        silver.approve(address(goldSilverCurve), type(uint).max);
+        goldSilverCurve.deposit(poolGoldBal.div(100), block.timestamp + 60);
+        cheats.stopPrank();
+    }
+
 }
