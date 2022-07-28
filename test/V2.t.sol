@@ -24,18 +24,17 @@ import "./lib/MockToken.sol";
 
 import "./utils/Utils.sol";
 
-contract CurveFactoryV2Test is Test {
+contract V2Test is Test {
     using SafeMath for uint256;
-
     CheatCodes cheats = CheatCodes(HEVM_ADDRESS);
     Utils utils;
 
-    MockUser public depositor;
-    MockUser public trader;
-    MockUser public treasury;
+    MockUser public depositor;// one who provides lp to the pool
+    MockUser public trader;// one to buys & sells in the pool
+    MockUser public treasury; //team treasury
 
-    MockToken gold;
-    MockToken silver;
+    MockToken gold;//mock erc20 token,
+    MockToken silver;//mock erc20 token
 
     MockOracleFactory oracleFactory;
     MockChainlinkOracle goldOracle;
@@ -111,39 +110,12 @@ contract CurveFactoryV2Test is Test {
         silver.approve(address(goldSilverCurve), type(uint).max);
         cheats.stopPrank();
     }
-
-    function testSwap () public {
-        // mint gold to trader
-        gold.mint(address(trader), 4 * goldDecimals);
-        cheats.startPrank(address(trader));
-        gold.approve(address(goldSilverCurve), type(uint).max);
-        silver.approve(address(goldSilverCurve), type(uint).max);
-        cheats.stopPrank();
-        // first deposit
-        cheats.startPrank(address(depositor));
-        goldSilverCurve.deposit(10000000 * goldDecimals, block.timestamp + 60);
-        cheats.stopPrank();
-        cheats.startPrank(address(trader));
-        uint256 originalGoldBal = gold.balanceOf(address(trader));
-        // now swap gold to silver
-        goldSilverCurve.originSwap(
-            address(gold),
-            address(silver), 
-            originalGoldBal,
-            0,
-            block.timestamp + 60
-        );
-        uint256 currentSilverBal = silver.balanceOf(address(trader));
-        cheats.stopPrank();
-        uint256 goldTokenDec = gold.decimals();
-        uint256 silverTokenDec = silver.decimals();
-        uint256 balanceRatio = (
-            currentSilverBal.mul(1000).div(silverTokenDec).mul(goldTokenDec).div(originalGoldBal)
-        );
-        assertApproxEqAbs(balanceRatio, 6 * 1000, balanceRatio.div(100));
-    }
-
-    function testSwapFuzz(uint256 amt) public {
+    /**
+    deploy gold,silver tokens, their price oracles, assimilators & test swap
+    check if v2 factory & it's deployed curve works properly based on both token's price
+    assuming both tokens are foreign stable coins
+     */
+    function testSwap(uint256 amt) public {
         cheats.assume(amt > 0);
         cheats.assume(amt < 100000);
         // mint gold to trader
@@ -176,4 +148,71 @@ contract CurveFactoryV2Test is Test {
         // price ratio is 6:1, balance ration also needs to be approx 6:1
         assertApproxEqAbs(balanceRatio, 6 * 1000, balanceRatio.div(100));
     }
+
+    // checks if directly sending pool tokens, not by calling deposit func of the pool
+    // see if the pool token total supply is changed
+    // directly tranferring tokens to the pool shouldn't change the pool total supply
+    function testTotalSupply(uint256 amount) public {
+        cheats.assume(amount > 1);
+        cheats.assume(amount < 10000000);
+        uint256 originalSupply = goldSilverCurve.totalSupply();
+        // first stake to get lp tokens
+        uint256 originalLP = goldSilverCurve.balanceOf(address(gold));
+        uint256 originalGoldBal = gold.balanceOf(address(gold));
+        uint256 originalSilverBal = silver.balanceOf(address(silver));
+
+        // now directly send tokens
+        gold.mint(address(goldSilverCurve), amount.div(100));
+        silver.mint(address(goldSilverCurve), amount.div(50));
+        uint256 currentLP = goldSilverCurve.balanceOf(address(gold));
+        uint256 currentGoldBal = gold.balanceOf(address(gold));
+        uint256 currentSilverBal = silver.balanceOf(address(silver));
+        console.logUint(originalLP);
+        console.logUint(currentLP);
+        assertApproxEqAbs(originalLP, currentLP,0);
+    }
+
+    /*
+    * user swaps gold to silver then does reverse swap into gold from silver
+    swap amount is relatively huge compare to the pool balance
+    after 2 rounds of swap, user gets almost same amount of gold to the original gold balance
+     */
+    function testSwapDifference (uint256 percentage) public {
+        cheats.assume(percentage > 0);
+        cheats.assume(percentage < 50);
+        // first deposit from the depositor
+        cheats.startPrank(address(depositor));
+        goldSilverCurve.deposit(10000000 * goldDecimals, block.timestamp + 60);
+        cheats.stopPrank();
+        uint256 poolGoldBal = gold.balanceOf(address(goldSilverCurve));
+        // mint gold to trader
+        gold.mint(address(trader), poolGoldBal.div(100).mul(percentage));
+        cheats.startPrank(address(trader));
+        gold.approve(address(goldSilverCurve), type(uint).max);
+        silver.approve(address(goldSilverCurve), type(uint).max);
+        uint256 originalGoldBal = gold.balanceOf(address(trader));
+        // first swap gold into silver
+        goldSilverCurve.originSwap(
+            address(gold),
+            address(silver),
+            originalGoldBal,
+            0,
+            block.timestamp + 60);
+        // now swaps back silver into gold
+        goldSilverCurve.originSwap(
+            address(silver),
+            address(gold),
+            silver.balanceOf(address(trader)),
+            0,
+            block.timestamp + 60
+        );
+        uint256 currentGoldBal = gold.balanceOf(address(trader));
+        assertApproxEqAbs(
+            originalGoldBal,
+            currentGoldBal,
+            originalGoldBal.div(1000)
+        );
+        cheats.stopPrank();
+    }
+
 }
