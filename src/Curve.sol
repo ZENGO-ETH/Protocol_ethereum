@@ -16,7 +16,11 @@
 pragma solidity ^0.8.7;
 pragma experimental ABIEncoderV2;
 
+import "../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import "./lib/ABDKMath64x64.sol";
+
+import "./lib/FullMath.sol";
 
 import "./Orchestrator.sol";
 
@@ -228,6 +232,7 @@ library Curves {
 
 contract Curve is Storage, MerkleProver {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     address private curveFactory;
 
@@ -604,6 +609,59 @@ contract Curve is Storage, MerkleProver {
     function approve(address _spender, uint256 _amount) public nonReentrant returns (bool success_) {
         success_ = Curves.approve(curve, _spender, _amount);
     }
+    
+    // Commented out are for global stats only
+    function flash(
+        address recipient,
+        uint256 amount0,
+        uint256 amount1
+        bytes calldata data
+    // ) external override lock noDelegateCall {
+    ) external {
+        // uint128 _liquidity = liquidity;
+        // require(_liquidity > 0, 'L');
+        // temp testing variable
+        uint24 fee = 100;
+        address derivative0 = derivatives[0];
+        address derivative1 = derivatives[1];
+        
+        uint256 fee0 = FullMath.mulDivRoundingUp(amount0, fee, 1e6);
+        uint256 fee1 = FullMath.mulDivRoundingUp(amount1, fee, 1e6);
+        balance0Before = IERC20(derivative0).balanceOf(address(this));
+        balance1Before = IERC20(derivative1).balanceOf(address(this));
+
+        // if (amount0 > 0) TransferHelper.safeTransfer(token0, recipient, amount0);
+        if (amount0 > 0) IERC20(derivative0).safeTransfer(recipient, amount0);
+        // if (amount1 > 0) TransferHelper.safeTransfer(token1, recipient, amount1);
+        if (amount1 > 0) IERC20(derivative1).safeTransfer(recipient, amount1);
+
+        IUniswapV3FlashCallback(msg.sender).uniswapV3FlashCallback(fee0, fee1, data);
+
+        uint256 balance0After = IERC20(derivative0).balanceOf(address(this));
+        uint256 balance1After = IERC20(derivative1).balanceOf(address(this));
+
+        require(balance0Before.add(fee0) <= balance0After, 'F0');
+        require(balance1Before.add(fee1) <= balance1After, 'F1');
+
+        // sub is safe because we know balanceAfter is gt balanceBefore by at least fee
+        // uint256 paid0 = balance0After - balance0Before;
+        // uint256 paid1 = balance1After - balance1Before;
+
+        // if (paid0 > 0) {
+        //     uint8 feeProtocol0 = slot0.feeProtocol % 16;
+        //     uint256 fees0 = feeProtocol0 == 0 ? 0 : paid0 / feeProtocol0;
+        //     if (uint128(fees0) > 0) protocolFees.token0 += uint128(fees0);
+        //     feeGrowthGlobal0X128 += FullMath.mulDiv(paid0 - fees0, FixedPoint128.Q128, _liquidity);
+        // }
+        // if (paid1 > 0) {
+        //     uint8 feeProtocol1 = slot0.feeProtocol >> 4;
+        //     uint256 fees1 = feeProtocol1 == 0 ? 0 : paid1 / feeProtocol1;
+        //     if (uint128(fees1) > 0) protocolFees.token1 += uint128(fees1);
+        //     feeGrowthGlobal1X128 += FullMath.mulDiv(paid1 - fees1, FixedPoint128.Q128, _liquidity);
+        // }
+
+        // emit Flash(msg.sender, recipient, amount0, amount1, paid0, paid1);
+    }    
 
     /// @notice view the curve token balance of a given account
     /// @param _account the account to view the balance of
