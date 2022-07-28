@@ -13,6 +13,7 @@ import "../src/AssimilatorFactory.sol";
 import "../src/CurveFactoryV2.sol";
 import "../src/Curve.sol";
 import "../src/Structs.sol";
+import "../src/Router.sol";
 import "../src/lib/ABDKMath64x64.sol";
 
 import "./lib/MockUser.sol";
@@ -60,6 +61,7 @@ contract RouterTest is Test {
 
     AssimilatorFactory assimilatorFactory;
     CurveFactoryV2 curveFactory;
+    Router router;
     Curve[fxTokenCount] dfxCurves;
 
     function setUp() public {
@@ -77,6 +79,8 @@ contract RouterTest is Test {
             address(multisig),
             address(assimilatorFactory)
         );
+
+        router = new Router(address(curveFactory));
         
         assimilatorFactory.setCurveFactory(address(curveFactory));
         
@@ -105,8 +109,38 @@ contract RouterTest is Test {
 
             dfxCurves[i].turnOffWhitelisting();
         }
+        
 
-        // Deploy Router
-        // Deploy Minter
+        uint256 user1TknAmnt = 300_000;
+
+        // Mint Foreign Stables
+        for (uint8 i = 0; i <= fxTokenCount; i++) {
+            uint256 decimals = utils.tenToPowerOf(foreignStables[i].decimals());
+            deal(address(foreignStables[i]), address(users[0]), user1TknAmnt.mul(decimals));
+        }
+        
+        cheats.startPrank(address(users[0]));
+        for (uint8 i = 0; i < fxTokenCount; i++) {            
+            foreignStables[i].approve(address(dfxCurves[i]), type(uint).max);
+            foreignStables[i].approve(address(router), type(uint).max);
+            usdc.approve(address(dfxCurves[i]), type(uint).max);
+        }
+        usdc.approve(address(router), type(uint).max);
+        cheats.stopPrank();
+
+        cheats.startPrank(address(users[0]));
+        for (uint8 i = 0; i < fxTokenCount; i++) {           
+            dfxCurves[i].deposit(50_000e18, block.timestamp + 60);
+        }
+        cheats.stopPrank();
+    }
+    function testRouter() public {
+        // emit log_uint(foreignStables[0].balanceOf(address(users[0])));
+        // emit log_uint(foreignStables[1].balanceOf(address(users[0])));
+        // emit log_uint(foreignStables[2].balanceOf(address(users[0])));
+        // emit log_uint(foreignStables[3].balanceOf(address(users[0])));
+        cheats.prank(address(users[0]));
+        // CADC -> USDC
+        emit log_uint(router.viewOriginSwap(Mainnet.USDC, Mainnet.XSGD, Mainnet.CADC, 900e6));
     }
 }
