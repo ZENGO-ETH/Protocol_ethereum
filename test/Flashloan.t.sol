@@ -137,21 +137,13 @@ contract FlashloanTest is Test {
         cheats.stopPrank();
     }
     function testFlashloan() public {
-        // emit log_uint(foreignStables[0].balanceOf(address(users[0])));
-        // emit log_uint(foreignStables[1].balanceOf(address(users[0])));
-        // emit log_uint(foreignStables[2].balanceOf(address(users[0])));
-        // emit log_uint(foreignStables[3].balanceOf(address(users[0])));
-        // cheats.prank(address(users[0]));
-        // CADC -> USDC
-        // emit log_uint(router. viewOriginSwap(Mainnet.USDC, Mainnet.XSGD, Mainnet.CADC, 900e6));
-        emit log_uint(IERC20(Mainnet.CADC).balanceOf(address(dfxCurves[0])));
-        emit log_uint(IERC20(Mainnet.USDC).balanceOf(address(dfxCurves[0])));
-
-        (uint256 bal1, uint256 bal2) = dfxCurves[0].flash(address(flashloaner), 1e6, 1e6);
-        emit log_uint(bal1);
-        emit log_uint(bal2);
-
-        emit log_uint(IERC20(Mainnet.CADC).balanceOf(address(flashloaner)));
-        emit log_uint(IERC20(Mainnet.CADC).balanceOf(address(flashloaner)));
+        dfxCurves[0].flash(
+            address(flashloaner),
+            1e6,
+            1e6,
+            abi.encode(
+                
+            )
+        );
     }
 }

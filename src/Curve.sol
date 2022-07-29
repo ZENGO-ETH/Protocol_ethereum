@@ -13,8 +13,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.13;
 pragma experimental ABIEncoderV2;
+
+import './interfaces/IUniswapV3FlashCallback.sol';
 
 import "../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -614,7 +616,7 @@ contract Curve is Storage, MerkleProver {
     function flash(
         address recipient,
         uint256 amount0,
-        uint256 amount1
+        uint256 amount1,
         bytes calldata data
     // ) external override lock noDelegateCall {
     ) external {
@@ -627,21 +629,22 @@ contract Curve is Storage, MerkleProver {
         
         uint256 fee0 = FullMath.mulDivRoundingUp(amount0, fee, 1e6);
         uint256 fee1 = FullMath.mulDivRoundingUp(amount1, fee, 1e6);
-        balance0Before = IERC20(derivative0).balanceOf(address(this));
-        balance1Before = IERC20(derivative1).balanceOf(address(this));
+        uint256 balance0Before = IERC20(derivative0).balanceOf(address(this));
+        uint256 balance1Before = IERC20(derivative1).balanceOf(address(this));
 
         // if (amount0 > 0) TransferHelper.safeTransfer(token0, recipient, amount0);
         if (amount0 > 0) IERC20(derivative0).safeTransfer(recipient, amount0);
         // if (amount1 > 0) TransferHelper.safeTransfer(token1, recipient, amount1);
         if (amount1 > 0) IERC20(derivative1).safeTransfer(recipient, amount1);
 
+        // Calls our contract back
         IUniswapV3FlashCallback(msg.sender).uniswapV3FlashCallback(fee0, fee1, data);
 
         uint256 balance0After = IERC20(derivative0).balanceOf(address(this));
         uint256 balance1After = IERC20(derivative1).balanceOf(address(this));
 
-        require(balance0Before.add(fee0) <= balance0After, 'F0');
-        require(balance1Before.add(fee1) <= balance1After, 'F1');
+        // require(balance0Before.add(fee0) <= balance0After, 'F0');
+        // require(balance1Before.add(fee1) <= balance1After, 'F1');
 
         // sub is safe because we know balanceAfter is gt balanceBefore by at least fee
         // uint256 paid0 = balance0After - balance0Before;
