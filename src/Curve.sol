@@ -643,8 +643,8 @@ contract Curve is Storage, MerkleProver {
         uint256 balance0After = IERC20(derivative0).balanceOf(address(this));
         uint256 balance1After = IERC20(derivative1).balanceOf(address(this));
 
-        // require(balance0Before.add(fee0) <= balance0After, 'F0');
-        // require(balance1Before.add(fee1) <= balance1After, 'F1');
+        require(balance0Before.add(fee0) <= balance0After, 'F0');
+        require(balance1Before.add(fee1) <= balance1After, 'F1');
 
         // sub is safe because we know balanceAfter is gt balanceBefore by at least fee
         // uint256 paid0 = balance0After - balance0Before;

@@ -21,6 +21,7 @@ import "./lib/CheatCodes.sol";
 import "./lib/Address.sol";
 import "./lib/CurveParams.sol";
 import "./utils/Utils.sol";
+import "./utils/CuveFlash.sol";
 
 contract FlashloanTest is Test {
     using SafeMath for uint256;
@@ -64,11 +65,13 @@ contract FlashloanTest is Test {
     CurveFactoryV2 curveFactory;
     Router router;
     Curve[fxTokenCount] dfxCurves;
+    CurveFlash curveFlash;
 
     function setUp() public {
         multisig = new MockUser();
         flashloaner = new MockUser();
         utils = new Utils();
+        curveFlash = new CurveFlash();
 
         for (uint8 i = 0; i < users.length; i++) {
             users[i] = new MockUser();
@@ -137,13 +140,22 @@ contract FlashloanTest is Test {
         cheats.stopPrank();
     }
     function testFlashloan() public {
-        dfxCurves[0].flash(
-            address(flashloaner),
-            1e6,
-            1e6,
-            abi.encode(
-                
-            )
-        );
+        // Deploy CurveFlash
+        // Fund curveFlash with tokens to repay
+        deal(Mainnet.CADC, address(curveFlash), 100_000e18);
+        deal(Mainnet.USDC, address(curveFlash), 100_000e6);
+
+        FlashParams memory flashData = FlashParams({
+            token0: address(Mainnet.CADC),
+            token1: address(Mainnet.USDC),
+            fee1: uint24(100),
+            amount0: 1e18,
+            amount1: 1e6
+        });
+
+        curveFlash.initFlash(address(dfxCurves[0]), flashData);
+        
+        emit log_uint(IERC20(Mainnet.CADC).balanceOf(address(curveFlash)));
+        emit log_uint(IERC20(Mainnet.USDC).balanceOf(address(curveFlash)));
     }
 }

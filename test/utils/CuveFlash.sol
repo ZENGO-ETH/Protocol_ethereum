@@ -4,8 +4,9 @@ import '@uniswap/v3-core/contracts/libraries/LowGasSafeMath.sol';
 import "../../src/Curve.sol";
 import "../../src/interfaces/ICurve.sol";
 import "../../src/interfaces/IUniswapV3FlashCallback.sol";
+import "./FlashStructs.sol";
 
-contract ContractFlash is IUniswapV3FlashCallback  {
+contract CurveFlash is IUniswapV3FlashCallback  {
     using LowGasSafeMath for uint256;
     using LowGasSafeMath for int256;
     using SafeERC20 for IERC20;
@@ -29,22 +30,6 @@ contract ContractFlash is IUniswapV3FlashCallback  {
 
         IERC20(token0).safeTransfer(decoded.poolAddress, amount0Owed);
         IERC20(token1).safeTransfer(decoded.poolAddress, amount1Owed);
-    }
-
-    struct FlashParams {
-        address token0;
-        address token1;
-        uint24 fee1;
-        uint256 amount0;
-        uint256 amount1;
-        uint24 fee2;
-        uint24 fee3;
-    }
-
-    struct FlashCallbackData {
-        uint256 amount0;
-        uint256 amount1;
-        address poolAddress;
     }
 
     function initFlash(address _dfxCurve, FlashParams memory params) external {
