@@ -646,6 +646,8 @@ contract Curve is Storage, MerkleProver {
         require(balance0Before.add(fee0) <= balance0After, 'F0');
         require(balance1Before.add(fee1) <= balance1After, 'F1');
 
+        // Should route the fees to owner?
+
         // sub is safe because we know balanceAfter is gt balanceBefore by at least fee
         // uint256 paid0 = balance0After - balance0Before;
         // uint256 paid1 = balance1After - balance1Before;
