@@ -9,7 +9,7 @@ library DefaultCurve {
     uint256 public constant BETA = 35e16;
     uint256 public constant MAX = 15e16;
     uint256 public constant EPSILON = 4e14;
-    uint256 public constant LAMBDA = 3e17;
+    uint256 public constant LAMBDA = 1e18;
 
     // Weights
     uint256 public constant BASE_WEIGHT = 6e17;

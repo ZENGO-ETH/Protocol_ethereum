@@ -237,4 +237,47 @@ contract V2Test is Test {
         goldUsdcCurve.deposit(poolGoldBal.div(percentage).mul(100), block.timestamp + 60);
         cheats.stopPrank();
     }
+
+    function testProtocolFee (uint256 traderGoldBal) public{
+        cheats.assume(traderGoldBal > 10 * goldDecimals);
+        cheats.assume(traderGoldBal < 100000 * goldDecimals);
+        cheats.startPrank(address(depositor));
+        goldUsdcCurve.deposit(10000000 * goldDecimals, block.timestamp + 60);
+        cheats.stopPrank();
+
+        gold.mint(address(trader), traderGoldBal);
+
+        cheats.startPrank(address(trader));
+        gold.approve(address(goldUsdcCurve), type(uint256).max);
+        usdc.approve(address(goldUsdcCurve), type(uint256).max);
+
+        goldUsdcCurve.originSwap(
+            address(gold),
+            address(usdc),
+            traderGoldBal,
+            0,
+            block.timestamp + 60
+            );
+        uint256 treasuryGoldBal = gold.balanceOf(address(treasury));
+        uint256 treasuryUsdcBal = usdc.balanceOf(address(treasury));
+        uint256 traderUsdcBal = usdc.balanceOf(address(trader));
+        // first swap
+        console.logString("1st swap");
+        console.logUint(traderUsdcBal);
+        console.logUint(treasuryUsdcBal);
+        console.logString("trader usdc bal");
+        console.logUint(traderUsdcBal);
+        // second swap
+        goldUsdcCurve.originSwap(
+            address(usdc),
+            address(gold),
+            usdc.balanceOf(address(trader)),
+            0,
+            block.timestamp + 60
+            );
+        console.logString("2nd swap");
+        console.logUint(gold.balanceOf(address(treasury)));
+        console.logUint(usdc.balanceOf(address(treasury)));
+
+    }
 }
