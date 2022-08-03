@@ -624,7 +624,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         uint256 amount1,
         bytes calldata data
     ) external transactable noDelegateCall {
-        uint24 fee = uint24(uint128(int128(ICurveFactory(curveFactory).getProtocolFee())));
+        uint24 fee = uint24(uint128(ICurveFactory(curveFactory).getProtocolFee()));
         
         require(IERC20(derivatives[0]).balanceOf(address(this)) > 0, 'L1');
         require(IERC20(derivatives[1]).balanceOf(address(this)) > 0, 'L2');
