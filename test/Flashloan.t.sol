@@ -15,6 +15,7 @@ import "../src/Curve.sol";
 import "../src/Structs.sol";
 import "../src/Router.sol";
 import "../src/lib/ABDKMath64x64.sol";
+import "../src/lib/FullMath.sol";
 
 import "./lib/MockUser.sol";
 import "./lib/CheatCodes.sol";
@@ -59,7 +60,7 @@ contract FlashloanTest is Test {
         usdcOracle
     ];
 
-    int128 public protocolFee = 50;
+    int128 public protocolFee = 100;
 
     AssimilatorFactory assimilatorFactory;
     CurveFactoryV2 curveFactory;
@@ -116,7 +117,7 @@ contract FlashloanTest is Test {
         }
         
 
-        uint256 user1TknAmnt = 300_000;
+        uint256 user1TknAmnt = 300_000_000;
 
         // Mint Foreign Stables
         for (uint8 i = 0; i <= fxTokenCount; i++) {
@@ -135,27 +136,52 @@ contract FlashloanTest is Test {
 
         cheats.startPrank(address(users[0]));
         for (uint8 i = 0; i < fxTokenCount; i++) {           
-            dfxCurves[i].deposit(50_000e18, block.timestamp + 60);
+            dfxCurves[i].deposit(100_000_000e18, block.timestamp + 60);
         }
         cheats.stopPrank();
     }
-    function testFlashloan() public {
-        // Deploy CurveFlash
-        // Fund curveFlash with tokens to repay
+
+    function testFlashloan(uint256 flashAmount) public {
+        cheats.assume(flashAmount > 0);
+        cheats.assume(flashAmount < 10_000_000);
+
+        uint256 decimals = utils.tenToPowerOf(cadc.decimals());
+
         deal(Mainnet.CADC, address(curveFlash), 100_000e18);
         deal(Mainnet.USDC, address(curveFlash), 100_000e6);
+
+        uint256 derivative0Before = IERC20(Mainnet.CADC).balanceOf(address(dfxCurves[0]));
+        uint256 derivative1Before = IERC20(Mainnet.USDC).balanceOf(address(dfxCurves[0]));
 
         FlashParams memory flashData = FlashParams({
             token0: address(Mainnet.CADC),
             token1: address(Mainnet.USDC),
-            fee1: uint24(100),
-            amount0: 1e18,
-            amount1: 1e6
+            fee: uint24(100),
+            amount0: flashAmount.mul(decimals),
+            amount1: flashAmount.mul(1e6)
         });
 
         curveFlash.initFlash(address(dfxCurves[0]), flashData);
         
-        emit log_uint(IERC20(Mainnet.CADC).balanceOf(address(curveFlash)));
-        emit log_uint(IERC20(Mainnet.USDC).balanceOf(address(curveFlash)));
+        uint256 derivative0After = IERC20(Mainnet.CADC).balanceOf(address(dfxCurves[0]));
+        uint256 derivative1After = IERC20(Mainnet.USDC).balanceOf(address(dfxCurves[0]));
+
+        uint256 generatedFee0 = FullMath.mulDivRoundingUp(flashData.amount0, flashData.fee, 1e6);
+        uint256 generatedFee1 = FullMath.mulDivRoundingUp(flashData.amount1, flashData.fee, 1e6);
+
+        // Should transfer the ownership to multisig tho
+        assertEq(generatedFee0, IERC20(Mainnet.CADC).balanceOf(address(this)));
+        assertEq(generatedFee1, IERC20(Mainnet.USDC).balanceOf(address(this)));
+
+        assertGe(derivative0After, derivative0Before);
+        assertGe(derivative1After, derivative1Before);
     }
+
+    // Test returning less of asset 0 FAIL
+    // Test returning less of asset 1 FAIL
+    // Test returning more than asset 1 and 0
+
+    // asset 1 in curve doesnt have enough that is asked for FAIL
+    // asset 1 in curve doesnt have enough that is asked for FAIL
+
 }
