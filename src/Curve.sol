@@ -24,6 +24,8 @@ import "./lib/ABDKMath64x64.sol";
 
 import "./lib/FullMath.sol";
 
+import "./lib/NoDelegateCall.sol";
+
 import "./Orchestrator.sol";
 
 import "./ProportionalLiquidity.sol";
@@ -37,6 +39,8 @@ import "./Storage.sol";
 import "./MerkleProver.sol";
 
 import "./interfaces/IFreeFromUpTo.sol";
+
+import "./interfaces/ICurveFactory.sol";
 
 import "./Structs.sol";
 
@@ -232,7 +236,7 @@ library Curves {
     }
 }
 
-contract Curve is Storage, MerkleProver {
+contract Curve is Storage, MerkleProver, NoDelegateCall {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -614,15 +618,13 @@ contract Curve is Storage, MerkleProver {
         success_ = Curves.approve(curve, _spender, _amount);
     }
     
-    // Commented out are for global stats only
     function flash(
         address recipient,
         uint256 amount0,
         uint256 amount1,
         bytes calldata data
-    // ) external override lock noDelegateCall {
-    ) external transactable {
-        uint24 fee = 100;
+    ) external transactable noDelegateCall {
+        uint24 fee = uint24(uint128(int128(ICurveFactory(curveFactory).getProtocolFee())));
         
         require(IERC20(derivatives[0]).balanceOf(address(this)) > 0, 'L1');
         require(IERC20(derivatives[1]).balanceOf(address(this)) > 0, 'L2');
@@ -635,7 +637,6 @@ contract Curve is Storage, MerkleProver {
         if (amount0 > 0) IERC20(derivatives[0]).safeTransfer(recipient, amount0);
         if (amount1 > 0) IERC20(derivatives[1]).safeTransfer(recipient, amount1);
 
-        // Calls our contract back
         IUniswapV3FlashCallback(msg.sender).uniswapV3FlashCallback(fee0, fee1, data);
 
         uint256 balance0After = IERC20(derivatives[0]).balanceOf(address(this));

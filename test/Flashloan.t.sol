@@ -141,7 +141,7 @@ contract FlashloanTest is Test {
         cheats.stopPrank();
     }
 
-    function testFlashloan(uint256 flashAmount) public {
+    function testFlashloan(uint256 flashAmount, uint24 flashFee) public {
         cheats.assume(flashAmount > 0);
         cheats.assume(flashAmount < 10_000_000);
 
@@ -161,6 +161,7 @@ contract FlashloanTest is Test {
             amount1: flashAmount.mul(1e6)
         });
 
+        // TODO insert midway test to see that curve actually had funds to play with
         curveFlash.initFlash(address(dfxCurves[0]), flashData);
         
         uint256 derivative0After = IERC20(Mainnet.CADC).balanceOf(address(dfxCurves[0]));
@@ -177,11 +178,32 @@ contract FlashloanTest is Test {
         assertGe(derivative1After, derivative1Before);
     }
 
-    // Test returning less of asset 0 FAIL
-    // Test returning less of asset 1 FAIL
-    // Test returning more than asset 1 and 0
+    function testFlashloanFeeFail(uint256 flashAmount, uint24 flashFee) public {
+        cheats.assume(flashAmount > 0);
+        cheats.assume(flashAmount < 10_000_000);
 
-    // asset 1 in curve doesnt have enough that is asked for FAIL
-    // asset 1 in curve doesnt have enough that is asked for FAIL
+        cheats.assume(flashFee > 0);
+        cheats.assume(flashFee < 100);
 
+        uint256 decimals = utils.tenToPowerOf(cadc.decimals());
+
+        deal(Mainnet.CADC, address(curveFlash), 100_000e18);
+        deal(Mainnet.USDC, address(curveFlash), 100_000e6);
+
+        uint256 derivative0Before = IERC20(Mainnet.CADC).balanceOf(address(dfxCurves[0]));
+        uint256 derivative1Before = IERC20(Mainnet.USDC).balanceOf(address(dfxCurves[0]));
+
+        FlashParams memory flashData = FlashParams({
+            token0: address(Mainnet.CADC),
+            token1: address(Mainnet.USDC),
+            fee: flashFee,
+            amount0: flashAmount.mul(decimals),
+            amount1: flashAmount.mul(1e6)
+        });
+
+        curveFlash.initFlash(address(dfxCurves[0]), flashData);
+    }
+
+    // function testFlashloanCurveDepthFail(uint256 flashAmount, uint24 flashFee) public {
+    // }
 }
