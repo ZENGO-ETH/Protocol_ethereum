@@ -140,6 +140,7 @@ contract FlashloanTest is Test {
         cheats.stopPrank();
     }
 
+    // Normal Flashloan
     function testFlashloanCadc(uint256 flashAmount0, uint256 flashAmount1) public {
         IERC20Detailed token0 = cadc;
         IERC20Detailed token1 = usdc;
@@ -152,11 +153,11 @@ contract FlashloanTest is Test {
 
         uint256 fee = uint256(uint128(protocolFee));
 
-        uint256 decimals0 = utils.tenToPowerOf(token0.decimals());
-        uint256 decimals1 = utils.tenToPowerOf(token1.decimals());
+        uint256 dec0 = utils.tenToPowerOf(token0.decimals());
+        uint256 dec1 = utils.tenToPowerOf(token1.decimals());
 
-        deal(address(token0), address(curveFlash), uint256(100_000).mul(decimals0));
-        deal(address(token1), address(curveFlash), uint256(100_000).mul(decimals1));
+        deal(address(token0), address(curveFlash), uint256(100_000).mul(dec0));
+        deal(address(token1), address(curveFlash), uint256(100_000).mul(dec1));
 
         uint256 derivative0Before = token0.balanceOf(address(curve));
         uint256 derivative1Before = token1.balanceOf(address(curve));
@@ -164,8 +165,102 @@ contract FlashloanTest is Test {
         FlashParams memory flashData = FlashParams({
             token0: address(token0),
             token1: address(token1),
-            amount0: flashAmount0.mul(decimals0),
-            amount1: flashAmount1.mul(decimals1)
+            amount0: flashAmount0.mul(dec0),
+            amount1: flashAmount1.mul(dec1),
+            decimal0: dec0,
+            decimal1: dec1
+        });
+
+        curveFlash.initFlash(address(curve), flashData);
+        
+        uint256 derivative0After = token0.balanceOf(address(curve));
+        uint256 derivative1After = token1.balanceOf(address(curve));
+
+        uint256 generatedFee0 = FullMath.mulDivRoundingUp(flashData.amount0, fee, 1e6);
+        uint256 generatedFee1 = FullMath.mulDivRoundingUp(flashData.amount1, fee, 1e6);
+
+        // Should transfer the ownership to multisig tho
+        assertEq(generatedFee0, token0.balanceOf(address(this)));
+        assertEq(generatedFee1, token1.balanceOf(address(this)));
+
+        assertGe(derivative0After, derivative0Before);
+        assertGe(derivative1After, derivative1Before);
+    }
+
+    function testFlashloanXsgd(uint256 flashAmount0, uint256 flashAmount1) public {
+        IERC20Detailed token0 = xsgd;
+        IERC20Detailed token1 = usdc;
+        Curve curve = dfxCurves[1];
+
+        cheats.assume(flashAmount0 > 0);
+        cheats.assume(flashAmount0 < 10_000_000);
+        cheats.assume(flashAmount1 > 0);
+        cheats.assume(flashAmount1 < 10_000_000);
+
+        uint256 fee = uint256(uint128(protocolFee));
+
+        uint256 dec0 = utils.tenToPowerOf(token0.decimals());
+        uint256 dec1 = utils.tenToPowerOf(token1.decimals());
+
+        deal(address(token0), address(curveFlash), uint256(100_000).mul(dec0));
+        deal(address(token1), address(curveFlash), uint256(100_000).mul(dec1));
+
+        uint256 derivative0Before = token0.balanceOf(address(curve));
+        uint256 derivative1Before = token1.balanceOf(address(curve));
+
+        FlashParams memory flashData = FlashParams({
+            token0: address(token0),
+            token1: address(token1),
+            amount0: flashAmount0.mul(dec0),
+            amount1: flashAmount1.mul(dec1),
+            decimal0: dec0,
+            decimal1: dec1
+        });
+
+        curveFlash.initFlash(address(curve), flashData);
+        
+        uint256 derivative0After = token0.balanceOf(address(curve));
+        uint256 derivative1After = token1.balanceOf(address(curve));
+
+        uint256 generatedFee0 = FullMath.mulDivRoundingUp(flashData.amount0, fee, 1e6);
+        uint256 generatedFee1 = FullMath.mulDivRoundingUp(flashData.amount1, fee, 1e6);
+
+        // Should transfer the ownership to multisig tho
+        assertEq(generatedFee0, token0.balanceOf(address(this)));
+        assertEq(generatedFee1, token1.balanceOf(address(this)));
+
+        assertGe(derivative0After, derivative0Before);
+        assertGe(derivative1After, derivative1Before);
+    }
+
+    function testFlashloanEuro(uint256 flashAmount0, uint256 flashAmount1) public {
+        IERC20Detailed token0 = euroc;
+        IERC20Detailed token1 = usdc;
+        Curve curve = dfxCurves[2];
+
+        cheats.assume(flashAmount0 > 0);
+        cheats.assume(flashAmount0 < 10_000_000);
+        cheats.assume(flashAmount1 > 0);
+        cheats.assume(flashAmount1 < 10_000_000);
+
+        uint256 fee = uint256(uint128(protocolFee));
+
+        uint256 dec0 = utils.tenToPowerOf(token0.decimals());
+        uint256 dec1 = utils.tenToPowerOf(token1.decimals());
+
+        deal(address(token0), address(curveFlash), uint256(100_000).mul(dec0));
+        deal(address(token1), address(curveFlash), uint256(100_000).mul(dec1));
+
+        uint256 derivative0Before = token0.balanceOf(address(curve));
+        uint256 derivative1Before = token1.balanceOf(address(curve));
+
+        FlashParams memory flashData = FlashParams({
+            token0: address(token0),
+            token1: address(token1),
+            amount0: flashAmount0.mul(dec0),
+            amount1: flashAmount1.mul(dec1),
+            decimal0: dec0,
+            decimal1: dec1
         });
 
         curveFlash.initFlash(address(curve), flashData);
@@ -196,20 +291,88 @@ contract FlashloanTest is Test {
         cheats.assume(flashFee > 0);
         cheats.assume(flashFee < 100);
 
-        uint256 decimals0 = utils.tenToPowerOf(token0.decimals());
-        uint256 decimals1 = utils.tenToPowerOf(token1.decimals());
+        uint256 dec0 = utils.tenToPowerOf(token0.decimals());
+        uint256 dec1 = utils.tenToPowerOf(token1.decimals());
 
         // Dealing less than what can be paid back
         uint256 dealAmount0 = flashAmount0.mul(flashFee).div(1e6).sub(uint(1));
         uint256 dealAmount1 = flashAmount1.mul(flashFee).div(1e6).sub(uint(1));
-        deal(address(token0), address(curveFlash), dealAmount0.mul(decimals0));
-        deal(address(token1), address(curveFlash), dealAmount1.mul(decimals1));
+        deal(address(token0), address(curveFlash), dealAmount0.mul(dec0));
+        deal(address(token1), address(curveFlash), dealAmount1.mul(dec1));
 
         FlashParams memory flashData = FlashParams({
             token0: address(token0),
             token1: address(token1),
-            amount0: flashAmount0.mul(decimals0),
-            amount1: flashAmount1.mul(decimals1)
+            amount0: flashAmount0.mul(dec0),
+            amount1: flashAmount1.mul(dec1),
+            decimal0: dec0,
+            decimal1: dec1
+        });
+
+        curveFlash.initFlash(address(curve), flashData);
+    }
+
+    function testFail_FlashloanFeeXsgd(uint256 flashAmount0, uint256 flashAmount1, uint256 flashFee) public {
+        IERC20Detailed token0 = xsgd;
+        IERC20Detailed token1 = usdc;
+        Curve curve = dfxCurves[1];
+
+        cheats.assume(flashAmount0 > 0);
+        cheats.assume(flashAmount0 < 10_000_000);
+        cheats.assume(flashAmount1 > 0);
+        cheats.assume(flashAmount1 < 10_000_000);
+        cheats.assume(flashFee > 0);
+        cheats.assume(flashFee < 100);
+
+        uint256 dec0 = utils.tenToPowerOf(token0.decimals());
+        uint256 dec1 = utils.tenToPowerOf(token1.decimals());
+
+        // Dealing less than what can be paid back
+        uint256 dealAmount0 = flashAmount0.mul(flashFee).div(1e6).sub(uint(1));
+        uint256 dealAmount1 = flashAmount1.mul(flashFee).div(1e6).sub(uint(1));
+        deal(address(token0), address(curveFlash), dealAmount0.mul(dec0));
+        deal(address(token1), address(curveFlash), dealAmount1.mul(dec1));
+
+        FlashParams memory flashData = FlashParams({
+            token0: address(token0),
+            token1: address(token1),
+            amount0: flashAmount0.mul(dec0),
+            amount1: flashAmount1.mul(dec1),
+            decimal0: dec0,
+            decimal1: dec1
+        });
+
+        curveFlash.initFlash(address(curve), flashData);
+    }
+
+    function testFail_FlashloanFeeEuroc(uint256 flashAmount0, uint256 flashAmount1, uint256 flashFee) public {
+        IERC20Detailed token0 = euroc;
+        IERC20Detailed token1 = usdc;
+        Curve curve = dfxCurves[2];
+
+        cheats.assume(flashAmount0 > 0);
+        cheats.assume(flashAmount0 < 10_000_000);
+        cheats.assume(flashAmount1 > 0);
+        cheats.assume(flashAmount1 < 10_000_000);
+        cheats.assume(flashFee > 0);
+        cheats.assume(flashFee < 100);
+
+        uint256 dec0 = utils.tenToPowerOf(token0.decimals());
+        uint256 dec1 = utils.tenToPowerOf(token1.decimals());
+
+        // Dealing less than what can be paid back
+        uint256 dealAmount0 = flashAmount0.mul(flashFee).div(1e6).sub(uint(1));
+        uint256 dealAmount1 = flashAmount1.mul(flashFee).div(1e6).sub(uint(1));
+        deal(address(token0), address(curveFlash), dealAmount0.mul(dec0));
+        deal(address(token1), address(curveFlash), dealAmount1.mul(dec1));
+
+        FlashParams memory flashData = FlashParams({
+            token0: address(token0),
+            token1: address(token1),
+            amount0: flashAmount0.mul(dec0),
+            amount1: flashAmount1.mul(dec1),
+            decimal0: dec0,
+            decimal1: dec1
         });
 
         curveFlash.initFlash(address(curve), flashData);
@@ -225,17 +388,75 @@ contract FlashloanTest is Test {
         cheats.assume(flashAmount1 > 0);
         cheats.assume(flashAmount1 < 10_000_000);
 
-        uint256 decimals0 = utils.tenToPowerOf(token0.decimals());
-        uint256 decimals1 = utils.tenToPowerOf(token1.decimals());
+        uint256 dec0 = utils.tenToPowerOf(token0.decimals());
+        uint256 dec1 = utils.tenToPowerOf(token1.decimals());
 
-        deal(address(token0), address(curveFlash), uint256(100_000).mul(decimals0));
-        deal(address(token1), address(curveFlash), uint256(100_000).mul(decimals1));
+        deal(address(token0), address(curveFlash), uint256(100_000).mul(dec0));
+        deal(address(token1), address(curveFlash), uint256(100_000).mul(dec1));
 
         FlashParams memory flashData = FlashParams({
             token0: address(token0),
             token1: address(token1),
-            amount0: token0.balanceOf(address(curve)).add(flashAmount0.mul(decimals0)),
-            amount1: token1.balanceOf(address(curve)).add(flashAmount1.mul(decimals1))
+            amount0: token0.balanceOf(address(curve)).add(flashAmount0.mul(dec0)),
+            amount1: token1.balanceOf(address(curve)).add(flashAmount1.mul(dec1)),
+            decimal0: dec0,
+            decimal1: dec1
+        });
+
+        curveFlash.initFlash(address(curve), flashData);
+    }
+
+    function testFail_FlashloanCurveDepthXsgd(uint256 flashAmount0, uint256 flashAmount1) public {
+        IERC20Detailed token0 = xsgd;
+        IERC20Detailed token1 = usdc;
+        Curve curve = dfxCurves[1];
+
+        cheats.assume(flashAmount0 > 0);
+        cheats.assume(flashAmount0 < 10_000_000);
+        cheats.assume(flashAmount1 > 0);
+        cheats.assume(flashAmount1 < 10_000_000);
+
+        uint256 dec0 = utils.tenToPowerOf(token0.decimals());
+        uint256 dec1 = utils.tenToPowerOf(token1.decimals());
+
+        deal(address(token0), address(curveFlash), uint256(100_000).mul(dec0));
+        deal(address(token1), address(curveFlash), uint256(100_000).mul(dec1));
+
+        FlashParams memory flashData = FlashParams({
+            token0: address(token0),
+            token1: address(token1),
+            amount0: token0.balanceOf(address(curve)).add(flashAmount0.mul(dec0)),
+            amount1: token1.balanceOf(address(curve)).add(flashAmount1.mul(dec1)),
+            decimal0: dec0,
+            decimal1: dec1
+        });
+
+        curveFlash.initFlash(address(curve), flashData);
+    }
+
+    function testFail_FlashloanCurveDepthEuroc(uint256 flashAmount0, uint256 flashAmount1) public {
+        IERC20Detailed token0 = euroc;
+        IERC20Detailed token1 = usdc;
+        Curve curve = dfxCurves[2];
+
+        cheats.assume(flashAmount0 > 0);
+        cheats.assume(flashAmount0 < 10_000_000);
+        cheats.assume(flashAmount1 > 0);
+        cheats.assume(flashAmount1 < 10_000_000);
+
+        uint256 dec0 = utils.tenToPowerOf(token0.decimals());
+        uint256 dec1 = utils.tenToPowerOf(token1.decimals());
+
+        deal(address(token0), address(curveFlash), uint256(100_000).mul(dec0));
+        deal(address(token1), address(curveFlash), uint256(100_000).mul(dec1));
+
+        FlashParams memory flashData = FlashParams({
+            token0: address(token0),
+            token1: address(token1),
+            amount0: token0.balanceOf(address(curve)).add(flashAmount0.mul(dec0)),
+            amount1: token1.balanceOf(address(curve)).add(flashAmount1.mul(dec1)),
+            decimal0: dec0,
+            decimal1: dec1
         });
 
         curveFlash.initFlash(address(curve), flashData);

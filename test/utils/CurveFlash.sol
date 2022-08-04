@@ -5,8 +5,10 @@ import '@uniswap/v3-core/contracts/libraries/LowGasSafeMath.sol';
 import "../../src/Curve.sol";
 import "../../src/interfaces/ICurve.sol";
 import "../../src/interfaces/IFlashCallback.sol";
+import "../../src/interfaces/IERC20Detailed.sol";
 import "./FlashStructs.sol";
 import "../lib/Address.sol";
+import "./Utils.sol";
 
 contract CurveFlash is IFlashCallback, Test {
     using LowGasSafeMath for uint256;
@@ -14,6 +16,7 @@ contract CurveFlash is IFlashCallback, Test {
     using SafeERC20 for IERC20;
 
     Curve public dfxCurve;
+    Utils utils;
     
     function flashCallback(
         uint256 fee0,
@@ -27,9 +30,9 @@ contract CurveFlash is IFlashCallback, Test {
         address token0 = ICurve(curve).derivatives(0);
         address token1 = ICurve(curve).derivatives(1);
 
-        // Have the additional flashed tokens to do whatever
-        assertEq(IERC20(token0).balanceOf(address(this)), uint256(100_000e18).add(decoded.amount0));
-        assertEq(IERC20(token1).balanceOf(address(this)), uint256(100_000e6).add(decoded.amount1));
+        // Ensure flashed tokens exist
+        assertEq(IERC20(token0).balanceOf(address(this)), uint256(100_000).mul(decoded.decimal0).add(decoded.amount0));
+        assertEq(IERC20(token1).balanceOf(address(this)), uint256(100_000).mul(decoded.decimal1).add(decoded.amount1));
 
         uint256 amount0Owed = LowGasSafeMath.add(decoded.amount0, fee0);
         uint256 amount1Owed = LowGasSafeMath.add(decoded.amount1, fee1);
@@ -49,6 +52,8 @@ contract CurveFlash is IFlashCallback, Test {
                 FlashCallbackData({
                     amount0: params.amount0,
                     amount1: params.amount1,
+                    decimal0: params.decimal0,
+                    decimal1: params.decimal1,
                     poolAddress: _dfxCurve
                 })
             )

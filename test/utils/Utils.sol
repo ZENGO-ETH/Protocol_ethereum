@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 contract Utils {
-    function tenToPowerOf(uint256 decimals) public pure returns (uint256 pow){
+    function tenToPowerOf(uint8 decimals) public pure returns (uint256 pow){
         if (decimals == 2) {
             return 1e2;
         } else if (decimals == 6) {
