@@ -22,7 +22,7 @@ import "./lib/CheatCodes.sol";
 import "./lib/Address.sol";
 import "./lib/CurveParams.sol";
 import "./utils/Utils.sol";
-import "./utils/CuveFlash.sol";
+import "./utils/CurveFlash.sol";
 
 contract FlashloanTest is Test {
     using SafeMath for uint256;
@@ -150,6 +150,8 @@ contract FlashloanTest is Test {
         cheats.assume(flashAmount1 > 0);
         cheats.assume(flashAmount1 < 10_000_000);
 
+        uint256 fee = uint256(uint128(protocolFee));
+
         uint256 decimals0 = utils.tenToPowerOf(token0.decimals());
         uint256 decimals1 = utils.tenToPowerOf(token1.decimals());
 
@@ -162,7 +164,6 @@ contract FlashloanTest is Test {
         FlashParams memory flashData = FlashParams({
             token0: address(token0),
             token1: address(token1),
-            fee: uint24(uint128(protocolFee)),
             amount0: flashAmount0.mul(decimals0),
             amount1: flashAmount1.mul(decimals1)
         });
@@ -172,8 +173,8 @@ contract FlashloanTest is Test {
         uint256 derivative0After = token0.balanceOf(address(curve));
         uint256 derivative1After = token1.balanceOf(address(curve));
 
-        uint256 generatedFee0 = FullMath.mulDivRoundingUp(flashData.amount0, flashData.fee, 1e6);
-        uint256 generatedFee1 = FullMath.mulDivRoundingUp(flashData.amount1, flashData.fee, 1e6);
+        uint256 generatedFee0 = FullMath.mulDivRoundingUp(flashData.amount0, fee, 1e6);
+        uint256 generatedFee1 = FullMath.mulDivRoundingUp(flashData.amount1, fee, 1e6);
 
         // Should transfer the ownership to multisig tho
         assertEq(generatedFee0, token0.balanceOf(address(this)));
@@ -183,7 +184,7 @@ contract FlashloanTest is Test {
         assertGe(derivative1After, derivative1Before);
     }
 
-    function testFail_FlashloanFeeCadc(uint256 flashAmount0, uint256 flashAmount1, uint24 flashFee) public {
+    function testFail_FlashloanFeeCadc(uint256 flashAmount0, uint256 flashAmount1, uint256 flashFee) public {
         IERC20Detailed token0 = cadc;
         IERC20Detailed token1 = usdc;
         Curve curve = dfxCurves[0];
@@ -198,15 +199,15 @@ contract FlashloanTest is Test {
         uint256 decimals0 = utils.tenToPowerOf(token0.decimals());
         uint256 decimals1 = utils.tenToPowerOf(token1.decimals());
 
-        deal(address(token0), address(curveFlash), uint256(100_000).mul(decimals0));
-        deal(address(token1), address(curveFlash), uint256(100_000).mul(decimals1));
+        // Dealing less than what can be paid back
+        uint256 dealAmount0 = flashAmount0.mul(flashFee).div(1e6).sub(uint(1));
+        uint256 dealAmount1 = flashAmount1.mul(flashFee).div(1e6).sub(uint(1));
+        deal(address(token0), address(curveFlash), dealAmount0.mul(decimals0));
+        deal(address(token1), address(curveFlash), dealAmount1.mul(decimals1));
 
         FlashParams memory flashData = FlashParams({
             token0: address(token0),
             token1: address(token1),
-            // doesnt matter what you put in here the fee is already set in the curve
-            // want to force user to either not pay a fee or the amount back
-            fee: uint24(0),
             amount0: flashAmount0.mul(decimals0),
             amount1: flashAmount1.mul(decimals1)
         });
@@ -233,7 +234,6 @@ contract FlashloanTest is Test {
         FlashParams memory flashData = FlashParams({
             token0: address(token0),
             token1: address(token1),
-            fee: uint24(uint128(protocolFee)),
             amount0: token0.balanceOf(address(curve)).add(flashAmount0.mul(decimals0)),
             amount1: token1.balanceOf(address(curve)).add(flashAmount1.mul(decimals1))
         });

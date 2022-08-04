@@ -16,7 +16,7 @@
 pragma solidity ^0.8.13;
 pragma experimental ABIEncoderV2;
 
-import './interfaces/IUniswapV3FlashCallback.sol';
+import './interfaces/IFlashCallback.sol';
 
 import "../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -624,10 +624,10 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         uint256 amount1,
         bytes calldata data
     ) external transactable noDelegateCall {
-        uint24 fee = uint24(uint128(ICurveFactory(curveFactory).getProtocolFee()));
+        uint256 fee = uint256(uint128(ICurveFactory(curveFactory).getProtocolFee()));
         
-        require(IERC20(derivatives[0]).balanceOf(address(this)) > 0, 'L1');
-        require(IERC20(derivatives[1]).balanceOf(address(this)) > 0, 'L2');
+        require(IERC20(derivatives[0]).balanceOf(address(this)) > 0, 'Curve/token0-zero-liquidity-depth');
+        require(IERC20(derivatives[1]).balanceOf(address(this)) > 0, 'Curve/token1-zero-liquidity-depth');
         
         uint256 fee0 = FullMath.mulDivRoundingUp(amount0, fee, 1e6);
         uint256 fee1 = FullMath.mulDivRoundingUp(amount1, fee, 1e6);
@@ -637,13 +637,13 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         if (amount0 > 0) IERC20(derivatives[0]).safeTransfer(recipient, amount0);
         if (amount1 > 0) IERC20(derivatives[1]).safeTransfer(recipient, amount1);
 
-        IUniswapV3FlashCallback(msg.sender).uniswapV3FlashCallback(fee0, fee1, data);
+        IFlashCallback(msg.sender).flashCallback(fee0, fee1, data);
 
         uint256 balance0After = IERC20(derivatives[0]).balanceOf(address(this));
         uint256 balance1After = IERC20(derivatives[1]).balanceOf(address(this));
 
-        require(balance0Before.add(fee0) <= balance0After, 'F0');
-        require(balance1Before.add(fee1) <= balance1After, 'F1');
+        require(balance0Before.add(fee0) <= balance0After, 'Curve/insufficient-token0-returned');
+        require(balance1Before.add(fee1) <= balance1After, 'Curve/insufficient-token1-returned');
 
         // sub is safe because we know balanceAfter is gt balanceBefore by at least fee
         uint256 paid0 = balance0After - balance0Before;

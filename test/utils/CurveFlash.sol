@@ -4,18 +4,18 @@ import "forge-std/Test.sol";
 import '@uniswap/v3-core/contracts/libraries/LowGasSafeMath.sol';
 import "../../src/Curve.sol";
 import "../../src/interfaces/ICurve.sol";
-import "../../src/interfaces/IUniswapV3FlashCallback.sol";
+import "../../src/interfaces/IFlashCallback.sol";
 import "./FlashStructs.sol";
 import "../lib/Address.sol";
 
-contract CurveFlash is IUniswapV3FlashCallback, Test {
+contract CurveFlash is IFlashCallback, Test {
     using LowGasSafeMath for uint256;
     using LowGasSafeMath for int256;
     using SafeERC20 for IERC20;
 
     Curve public dfxCurve;
     
-    function uniswapV3FlashCallback(
+    function flashCallback(
         uint256 fee0,
         uint256 fee1,
         bytes calldata data
