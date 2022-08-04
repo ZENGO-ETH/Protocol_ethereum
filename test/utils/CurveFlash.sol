@@ -1,13 +1,13 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import '@uniswap/v3-core/contracts/libraries/LowGasSafeMath.sol';
 import "../../src/Curve.sol";
 import "../../src/interfaces/ICurve.sol";
 import "../../src/interfaces/IFlashCallback.sol";
 import "../../src/interfaces/IERC20Detailed.sol";
-import "./FlashStructs.sol";
 import "../lib/Address.sol";
+import '../lib/LowGasSafeMath.sol';
+import "./FlashStructs.sol";
 import "./Utils.sol";
 
 contract CurveFlash is IFlashCallback, Test {
