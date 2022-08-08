@@ -135,12 +135,25 @@ contract RouterTest is Test {
         cheats.stopPrank();
     }
     function testRouter() public {
-        // emit log_uint(foreignStables[0].balanceOf(address(users[0])));
-        // emit log_uint(foreignStables[1].balanceOf(address(users[0])));
-        // emit log_uint(foreignStables[2].balanceOf(address(users[0])));
-        // emit log_uint(foreignStables[3].balanceOf(address(users[0])));
-        cheats.prank(address(users[0]));
-        // CADC -> USDC
-        emit log_uint(router.viewOriginSwap(Mainnet.USDC, Mainnet.XSGD, Mainnet.CADC, 900e6));
+        IERC20Detailed fromToken = xsgd;
+        IERC20Detailed toToken = cadc;
+        IOracle fromOracle = xsgdOracle;
+        IOracle toOracle = cadcOracle;
+
+
+        // uint256 dec0 = utils.tenToPowerOf(token0.decimals());
+        deal(address(fromToken), address(this), uint256(100_000).mul(1e6));
+        fromToken.approve(address(router), type(uint).max);
+    
+
+        uint256 viewExpected = router.viewOriginSwap(Mainnet.USDC, Mainnet.XSGD, Mainnet.CADC, 900e6);
+        
+        uint256 beforeAmount = toToken.balanceOf(address(this));
+        
+        router.originSwap(Mainnet.USDC, Mainnet.XSGD, Mainnet.CADC, 900e6, 0, block.timestamp + 60);
+        
+        uint256 afterAmount = toToken.balanceOf(address(this));
+
+        
     }
 }
