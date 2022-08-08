@@ -110,7 +110,6 @@ contract RouterTest is Test {
             dfxCurves[i].turnOffWhitelisting();
         }
         
-
         uint256 user1TknAmnt = 300_000_000;
 
         // Mint Foreign Stables
@@ -172,8 +171,8 @@ contract RouterTest is Test {
             expected = expected.div(10 ** decimalsDiff);
         }
 
-        // 99.9% approximate
-        assertApproxEqRel(obtained, expected, 0.999e18);
+        // 95% approximate
+        assertApproxEqRel(obtained, expected, 0.05e18);
     }
 
     function testCadcToUsdcTargetSwap(uint256 _amount) public {
@@ -219,14 +218,14 @@ contract RouterTest is Test {
     }
 
     function testXSGDToEurocTargetSwap(uint256 _amount) public {
-        cheats.assume(_amount > 10);
+        cheats.assume(_amount > 100);
         cheats.assume(_amount < 10_000_000);
 
         routerOriginSwapAndCheck(xsgd, euroc, xsgdOracle, eurocOracle, _amount);
     }
 
     function testXSGDToCadcTargetSwap(uint256 _amount) public {
-        cheats.assume(_amount > 10);
+        cheats.assume(_amount > 100);
         cheats.assume(_amount < 10_000_000);
 
         routerOriginSwapAndCheck(xsgd, cadc, xsgdOracle, cadcOracle, _amount);
