@@ -134,7 +134,6 @@ contract RouterTest is Test {
         cheats.stopPrank();
     }
 
-
     function routerOriginSwapAndCheck(
         IERC20Detailed fromToken, 
         IERC20Detailed toToken, 
@@ -145,7 +144,7 @@ contract RouterTest is Test {
         uint8 fromDecimals = fromToken.decimals();
         uint8 toDecimals = toToken.decimals();
 
-        uint256 amount = uint256(_amount).mul(fromDecimals);
+        uint256 amount = uint256(_amount).mul(10 ** fromDecimals);
 
         deal(address(fromToken), address(this), amount);
         fromToken.approve(address(router), type(uint).max);
@@ -164,67 +163,158 @@ contract RouterTest is Test {
         uint256 expected = amount.mul(fromRate).div(toRate);
 
         if (fromDecimals <= toDecimals) {
-            uint8 decimalsDiff = toToken.decimals() - fromToken.decimals();
+            uint8 decimalsDiff = toDecimals - fromDecimals;
             expected = expected.mul(10 ** decimalsDiff);
         } else {
-            uint8 decimalsDiff = fromToken.decimals() - toToken.decimals();
+            uint8 decimalsDiff = fromDecimals - toDecimals;
             expected = expected.div(10 ** decimalsDiff);
         }
 
-        // 95% approximate
-        assertApproxEqRel(obtained, expected, 0.05e18);
+        // 99% approximate
+        assertApproxEqRel(obtained, expected, 0.01e18);
     }
 
+    function routerViewTargetSwapAndCheck(
+        IERC20Detailed fromToken, 
+        IERC20Detailed toToken, 
+        IOracle fromOracle, 
+        IOracle toOracle, 
+        uint256 _amount) public {
+
+        uint8 fromDecimals = fromToken.decimals();
+        uint8 toDecimals = toToken.decimals();
+
+        uint256 amount = uint256(_amount).mul(10 ** toDecimals);
+
+        // Get oracle rates assuming decimals are equal
+        uint256 fromRate = uint256(fromOracle.latestAnswer());
+        uint256 toRate = uint256(toOracle.latestAnswer());
+
+        uint256 obtained = router.viewTargetSwap(Mainnet.USDC, address(fromToken), address(toToken), amount);
+
+        uint256 expected = amount.mul(toRate).div(fromRate);
+        
+        emit log_uint(expected);
+
+        if (fromDecimals <= toDecimals) {
+            uint8 decimalsDiff = toDecimals - fromDecimals;
+            expected = expected.div(10 ** decimalsDiff);
+        } else {
+            uint8 decimalsDiff = fromDecimals - toDecimals;
+            expected = expected.mul(10 ** decimalsDiff);
+        }
+        
+        assertApproxEqRel(obtained, expected, 0.01e18);
+    }
+    
+    // TARGET SWAPS
     function testCadcToUsdcTargetSwap(uint256 _amount) public {
-        cheats.assume(_amount > 10);
+        cheats.assume(_amount > 100);
+        cheats.assume(_amount < 10_000_000);
+
+        routerViewTargetSwapAndCheck(cadc, usdc, cadcOracle, usdcOracle, _amount);
+    }
+    
+    function testUsdcToCadcTargetSwap(uint256 _amount) public {
+        cheats.assume(_amount > 100);
+        cheats.assume(_amount < 10_000_000);
+
+        routerViewTargetSwapAndCheck(usdc, cadc, usdcOracle, cadcOracle, _amount);
+    }
+
+    function testCadcToXsgdTargetSwap(uint256 _amount) public {
+        cheats.assume(_amount > 100);
+        cheats.assume(_amount < 10_000_000);
+
+        routerViewTargetSwapAndCheck(cadc, xsgd, cadcOracle, xsgdOracle, _amount);
+    }
+
+    function testCadcToEurocTargetSwap(uint256 _amount) public {
+        cheats.assume(_amount > 100);
+        cheats.assume(_amount < 10_000_000);
+
+        routerViewTargetSwapAndCheck(cadc, euroc, cadcOracle, eurocOracle, _amount);
+    }
+
+    function testEurocToXsgdTargetSwap(uint256 _amount) public {
+        cheats.assume(_amount > 100);
+        cheats.assume(_amount < 10_000_000);
+
+        routerViewTargetSwapAndCheck(euroc, xsgd, eurocOracle, xsgdOracle, _amount);
+    }
+
+    function testXsgdToEurocTargetSwap(uint256 _amount) public {
+        cheats.assume(_amount > 100);
+        cheats.assume(_amount < 10_000_000);
+
+        routerViewTargetSwapAndCheck(xsgd, euroc, xsgdOracle, eurocOracle, _amount);
+    }
+
+    function testXsgdToCadcTargetSwap(uint256 _amount) public {
+        cheats.assume(_amount > 100);
+        cheats.assume(_amount < 10_000_000);
+
+        routerViewTargetSwapAndCheck(xsgd, cadc, xsgdOracle, cadcOracle, _amount);
+    }
+
+    function testEurocToCadcTargetSwap(uint256 _amount) public {
+        cheats.assume(_amount > 100);
+        cheats.assume(_amount < 10_000_000);
+
+        routerViewTargetSwapAndCheck(euroc, cadc, eurocOracle, cadcOracle, _amount);
+    }
+
+    // ORIGIN SWAPS
+    function testCadcToUsdcOriginSwap(uint256 _amount) public {
+        cheats.assume(_amount > 100);
         cheats.assume(_amount < 10_000_000);
 
         routerOriginSwapAndCheck(cadc, usdc, cadcOracle, usdcOracle, _amount);
     }
 
-    function testUsdcToXsgdTargetSwap(uint256 _amount) public {
-        cheats.assume(_amount > 10);
+    function testUsdcToXsgdOriginSwap(uint256 _amount) public {
+        cheats.assume(_amount > 100);
         cheats.assume(_amount < 10_000_000);
 
         routerOriginSwapAndCheck(usdc, xsgd, usdcOracle, xsgdOracle, _amount);
     }
 
-    function testCadcToEursTargetSwap(uint256 _amount) public {
-        cheats.assume(_amount > 10);
+    function testCadcToEursOriginSwap(uint256 _amount) public {
+        cheats.assume(_amount > 100);
         cheats.assume(_amount < 10_000_000);
 
         routerOriginSwapAndCheck(cadc, euroc, cadcOracle, eurocOracle, _amount);
     }
 
-    function testCadcToXsgdTargetSwap(uint256 _amount) public {
+    function testCadcToXsgdOriginSwap(uint256 _amount) public {
         cheats.assume(_amount > 10);
         cheats.assume(_amount < 10_000_000);
 
         routerOriginSwapAndCheck(cadc, xsgd, cadcOracle, xsgdOracle, _amount);
     }
 
-    function testEurocToXsgdTargetSwap(uint256 _amount) public {
-        cheats.assume(_amount > 10);
+    function testEurocToXsgdOriginSwap(uint256 _amount) public {
+        cheats.assume(_amount > 100);
         cheats.assume(_amount < 10_000_000);
 
         routerOriginSwapAndCheck(euroc, xsgd, eurocOracle, xsgdOracle, _amount);
     }
 
-    function testEurocToCadcTargetSwap(uint256 _amount) public {
-        cheats.assume(_amount > 10);
+    function testEurocToCadcOriginSwap(uint256 _amount) public {
+        cheats.assume(_amount > 100);
         cheats.assume(_amount < 10_000_000);
 
         routerOriginSwapAndCheck(euroc, cadc, eurocOracle, cadcOracle, _amount);
     }
 
-    function testXSGDToEurocTargetSwap(uint256 _amount) public {
+    function testXSGDToEurocOriginSwap(uint256 _amount) public {
         cheats.assume(_amount > 100);
         cheats.assume(_amount < 10_000_000);
 
         routerOriginSwapAndCheck(xsgd, euroc, xsgdOracle, eurocOracle, _amount);
     }
 
-    function testXSGDToCadcTargetSwap(uint256 _amount) public {
+    function testXSGDToCadcOriginSwap(uint256 _amount) public {
         cheats.assume(_amount > 100);
         cheats.assume(_amount < 10_000_000);
 
