@@ -95,7 +95,7 @@ contract V2Test is Test {
         goldUsdcCurve.turnOffWhitelisting();
 
         // now mint gold & silver tokens
-        uint256 mintAmt = 300_000_000;
+        uint256 mintAmt = 300_000_000_000;
         goldDecimals = utils.tenToPowerOf(gold.decimals());
         usdcDecimals = utils.tenToPowerOf(usdc.decimals());
 
@@ -117,7 +117,7 @@ contract V2Test is Test {
      */
     function testSwap(uint256 amt) public {
         cheats.assume(amt > 100);
-        cheats.assume(amt < 100000);
+        cheats.assume(amt < 10000000);
 
         // mint gold to trader
         gold.mint(address(trader), amt * goldDecimals);
@@ -132,7 +132,7 @@ contract V2Test is Test {
 
         // first deposit
         cheats.startPrank(address(depositor));
-        goldUsdcCurve.deposit(20000000 * goldDecimals, block.timestamp + 60);
+        goldUsdcCurve.deposit(2000000000 * goldDecimals, block.timestamp + 60);
         cheats.stopPrank();
 
         cheats.startPrank(address(trader));

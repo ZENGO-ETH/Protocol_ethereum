@@ -14,7 +14,6 @@ import "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 import "./CurveFactory.sol";
 import "./Structs.sol";
-import "../lib/forge-std/src/console.sol";
 
 library Swaps {
     using ABDKMath64x64 for int128;
@@ -50,11 +49,6 @@ library Swaps {
     function originSwap(Storage.Curve storage curve, OriginSwapData memory _swapData)
         external
         returns (
-            // address _origin,
-            // address _target,
-            // uint256 _originAmount,
-            // address _recipient,
-            // address _curveFactory
             uint256 tAmt_
         )
     {
@@ -113,11 +107,6 @@ library Swaps {
     function targetSwap(Storage.Curve storage curve, TargetSwapData memory _swapData)
         external
         returns (
-            // address _origin,
-            // address _target,
-            // uint256 _targetAmount,
-            // address _recipient,
-            // address _curveFactory
             uint256 oAmt_
         )
     {
