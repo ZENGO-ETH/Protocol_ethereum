@@ -20,13 +20,11 @@ import "./lib/MockUser.sol";
 import "./lib/CheatCodes.sol";
 import "./lib/Address.sol";
 import "./lib/CurveParams.sol";
-import "./utils/Utils.sol";
 
 contract RouterTest is Test {
     using SafeMath for uint256;
 
     CheatCodes cheats = CheatCodes(HEVM_ADDRESS);
-    Utils utils;
 
     MockUser multisig;
     MockUser[2] public users;
@@ -66,7 +64,6 @@ contract RouterTest is Test {
 
     function setUp() public {
         multisig = new MockUser();
-        utils = new Utils();
 
         for (uint8 i = 0; i < users.length; i++) {
             users[i] = new MockUser();
@@ -114,7 +111,7 @@ contract RouterTest is Test {
 
         // Mint Foreign Stables
         for (uint8 i = 0; i <= fxTokenCount; i++) {
-            uint256 decimals = utils.tenToPowerOf(foreignStables[i].decimals());
+            uint256 decimals = 10 ** foreignStables[i].decimals();
             deal(address(foreignStables[i]), address(users[0]), user1TknAmnt.mul(decimals));
         }
         
