@@ -38,14 +38,25 @@ contract V2Test is Test {
     IERC20Detailed usdc;
     IOracle usdcOracle;
 
+    IERC20Detailed cadc;
+    IOracle cadcOracle;
+
+    IERC20Detailed euroc;
+    IOracle eurocOracle;
+
     MockOracleFactory oracleFactory;
     MockChainlinkOracle goldOracle;
 
     Curve goldUsdcCurve;
+    Curve cadcUsdcCurve;
+    Curve eurocUsdcCurve;
+
     CurveFactoryV2 curveFactory;
     AssimilatorFactory assimFactory;
     uint256 public goldDecimals;
     uint256 public usdcDecimals;
+    uint256 public cadcDecimals;
+    uint256 public eurocDecimals;
 
     function setUp() public {
 
@@ -56,15 +67,17 @@ contract V2Test is Test {
 
         gold = new MockToken();
         usdc = IERC20Detailed(Mainnet.USDC);
+        cadc = IERC20Detailed(Mainnet.CADC);
+        euroc = IERC20Detailed(Mainnet.EUROC);
 
         oracleFactory = new MockOracleFactory();
-        // gold : silver usd ratio is 6 : 1
-        // decimal is 6, usd price is $15
         goldOracle = oracleFactory.newOracle(
             address(gold), "goldOracle",9, 20000000000
         );
 
         usdcOracle = IOracle(Mainnet.CHAINLINK_USDC_USD);
+        cadcOracle = IOracle(Mainnet.CHAINLINK_CAD_USD);
+        eurocOracle = IOracle(Mainnet.CHAINLINK_EUR_USD);
 
         assimFactory = new AssimilatorFactory();
         curveFactory = new CurveFactoryV2(
@@ -72,6 +85,7 @@ contract V2Test is Test {
         );
         assimFactory.setCurveFactory(address(curveFactory));
 
+        // gold usdc curve
         CurveInfo memory curveInfo = CurveInfo(
             "dfx-gold-usdc",
             "dgs",
@@ -94,19 +108,74 @@ contract V2Test is Test {
         );
         goldUsdcCurve.turnOffWhitelisting();
 
+        // cadc usdc curve
+        CurveInfo memory cadcCurveInfo = CurveInfo(
+            "dfx-cadc-usdc",
+            "dcs",
+            address(cadc),
+            address(usdc),
+            DefaultCurve.BASE_WEIGHT,
+            DefaultCurve.QUOTE_WEIGHT,
+            address(cadcOracle),
+            cadc.decimals(),
+            address(usdcOracle),
+            usdc.decimals()
+        );
+        cadcUsdcCurve = curveFactory.newCurve(cadcCurveInfo);
+        cadcUsdcCurve.setParams(
+            DefaultCurve.ALPHA,
+            DefaultCurve.BETA,
+            DefaultCurve.MAX,
+            DefaultCurve.EPSILON,
+            DefaultCurve.LAMBDA
+        );
+        cadcUsdcCurve.turnOffWhitelisting();
+
+        // euroc usdc curve
+        CurveInfo memory eurocCurveInfo = CurveInfo(
+            "dfx-euroc-usdc",
+            "des",
+            address(euroc),
+            address(usdc),
+            DefaultCurve.BASE_WEIGHT,
+            DefaultCurve.QUOTE_WEIGHT,
+            address(eurocOracle),
+            euroc.decimals(),
+            address(usdcOracle),
+            usdc.decimals()
+        );
+        eurocUsdcCurve = curveFactory.newCurve(eurocCurveInfo);
+        eurocUsdcCurve.setParams(
+            DefaultCurve.ALPHA,
+            DefaultCurve.BETA,
+            DefaultCurve.MAX,
+            DefaultCurve.EPSILON,
+            DefaultCurve.LAMBDA
+        );
+        eurocUsdcCurve.turnOffWhitelisting();
+
         // now mint gold & silver tokens
         uint256 mintAmt = 300_000_000_000;
         goldDecimals = utils.tenToPowerOf(gold.decimals());
         usdcDecimals = utils.tenToPowerOf(usdc.decimals());
+        cadcDecimals = utils.tenToPowerOf(cadc.decimals());
+        eurocDecimals = utils.tenToPowerOf(euroc.decimals());
 
         gold.mint(address(depositor), mintAmt.mul(goldDecimals));
         deal(address(usdc), address(depositor), mintAmt.mul(usdcDecimals));
-        // mint only 1k gold tokens 
+        deal(address(euroc), address(depositor), mintAmt.mul(eurocDecimals));
+        deal(address(cadc), address(depositor), mintAmt.mul(cadcDecimals));
         
         // now approve
         cheats.startPrank(address(depositor));
         gold.approve(address(goldUsdcCurve), type(uint).max);
         usdc.approve(address(goldUsdcCurve), type(uint).max);
+
+        euroc.approve(address(eurocUsdcCurve), type(uint).max);
+        usdc.approve(address(eurocUsdcCurve), type(uint).max);
+
+        cadc.approve(address(cadcUsdcCurve), type(uint).max);
+        usdc.approve(address(cadcUsdcCurve), type(uint).max);
         cheats.stopPrank();
     }
     /**
@@ -115,7 +184,7 @@ contract V2Test is Test {
     assuming both tokens are foreign stable coins
     gold usdc ratio is 1 : 20
      */
-    function testSwap(uint256 amt) public {
+    function testDeployTokenAndSwap(uint256 amt) public {
         cheats.assume(amt > 100);
         cheats.assume(amt < 10000000);
 
@@ -153,6 +222,44 @@ contract V2Test is Test {
         console.logUint(noDecUsdcBal);
         // price ratio is 1:20, balance ration also needs to be approx 1:20
         assertApproxEqAbs(noDecGoldBal.mul(20), noDecUsdcBal, noDecUsdcBal.div(100));
+    }
+    // test swap of euroc usdc
+    function testForeignStableCoinSwap(uint256 amt) public {
+        cheats.assume(amt > 100);
+        cheats.assume(amt < 10000000);
+
+        // mint euroc to trader
+        deal(address(euroc), address(trader), amt * eurocDecimals);
+
+        uint256 noDecEurocBal = euroc.balanceOf(address(trader));
+        noDecEurocBal = noDecEurocBal.div(eurocDecimals);
+
+        cheats.startPrank(address(trader));
+        euroc.approve(address(eurocUsdcCurve), type(uint).max);
+        usdc.approve(address(eurocUsdcCurve), type(uint).max);
+        cheats.stopPrank();
+
+        // first deposit
+        cheats.startPrank(address(depositor));
+        eurocUsdcCurve.deposit(1000000000 * 1e18, block.timestamp + 60);
+        cheats.stopPrank();
+
+        cheats.startPrank(address(trader));
+        uint256 originalEurocBal = euroc.balanceOf(address(trader));
+        // now swap euroc to usdc
+        eurocUsdcCurve.originSwap(
+            address(euroc),
+            address(usdc), 
+            originalEurocBal,
+            0,
+            block.timestamp + 60
+        );
+        cheats.stopPrank();
+
+        uint256 noDecUsdcBal = usdc.balanceOf(address(trader));
+        noDecUsdcBal = noDecUsdcBal.div(usdcDecimals);
+        // euroc price is no more than 105% of usdc
+        assertApproxEqAbs(noDecEurocBal, noDecUsdcBal, noDecUsdcBal.div(20));
     }
 
     // checks if directly sending pool tokens, not by calling deposit func of the pool
@@ -278,6 +385,5 @@ contract V2Test is Test {
         console.logString("2nd swap");
         console.logUint(gold.balanceOf(address(treasury)));
         console.logUint(usdc.balanceOf(address(treasury)));
-
     }
 }
