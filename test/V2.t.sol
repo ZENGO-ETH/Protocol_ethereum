@@ -33,7 +33,6 @@ contract V2Test is Test {
     MockUser[] public accounts;
 
     MockOracleFactory oracleFactory;
-    MockChainlinkOracle goldOracle;
     // token order is gold, euroc, cadc, usdc
     IERC20Detailed[] public tokens;
     IOracle[] public oracles;
