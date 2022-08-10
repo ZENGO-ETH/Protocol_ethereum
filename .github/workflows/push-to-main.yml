@@ -23,4 +23,6 @@ jobs:
 
       - name: Run forge tests
         # run: ./test.sh -p super_deep
-        run: forge test
+        run: |
+          forge clean
+          forge test --optimize --optimizer-runs 1000000 -v -f https://mainnet.infura.io/v3/406b22e3688c42898054d22555f43271 --fork-block-number 15129966
