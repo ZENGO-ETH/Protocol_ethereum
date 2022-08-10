@@ -13,10 +13,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.13;
 pragma experimental ABIEncoderV2;
 
+import './interfaces/IFlashCallback.sol';
+
+import "../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import "./lib/ABDKMath64x64.sol";
+
+import "./lib/FullMath.sol";
+
+import "./lib/NoDelegateCall.sol";
 
 import "./Orchestrator.sol";
 
@@ -31,6 +39,8 @@ import "./Storage.sol";
 import "./MerkleProver.sol";
 
 import "./interfaces/IFreeFromUpTo.sol";
+
+import "./interfaces/ICurveFactory.sol";
 
 import "./Structs.sol";
 
@@ -226,8 +236,9 @@ library Curves {
     }
 }
 
-contract Curve is Storage, MerkleProver {
+contract Curve is Storage, MerkleProver, NoDelegateCall {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     address private curveFactory;
 
@@ -263,6 +274,8 @@ contract Curve is Storage, MerkleProver {
     );
 
     event Transfer(address indexed from, address indexed to, uint256 value);
+
+    event Flash(address indexed from, address indexed to, uint256 value0, uint256 value1, uint256 paid0, uint256 paid1);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Curve/caller-is-not-owner");
@@ -604,6 +617,43 @@ contract Curve is Storage, MerkleProver {
     function approve(address _spender, uint256 _amount) public nonReentrant returns (bool success_) {
         success_ = Curves.approve(curve, _spender, _amount);
     }
+    
+    function flash(
+        address recipient,
+        uint256 amount0,
+        uint256 amount1,
+        bytes calldata data
+    ) external transactable noDelegateCall {
+        uint256 fee = uint256(uint128(ICurveFactory(curveFactory).getProtocolFee()));
+        
+        require(IERC20(derivatives[0]).balanceOf(address(this)) > 0, 'Curve/token0-zero-liquidity-depth');
+        require(IERC20(derivatives[1]).balanceOf(address(this)) > 0, 'Curve/token1-zero-liquidity-depth');
+        
+        uint256 fee0 = FullMath.mulDivRoundingUp(amount0, fee, 1e6);
+        uint256 fee1 = FullMath.mulDivRoundingUp(amount1, fee, 1e6);
+        uint256 balance0Before = IERC20(derivatives[0]).balanceOf(address(this));
+        uint256 balance1Before = IERC20(derivatives[1]).balanceOf(address(this));
+
+        if (amount0 > 0) IERC20(derivatives[0]).safeTransfer(recipient, amount0);
+        if (amount1 > 0) IERC20(derivatives[1]).safeTransfer(recipient, amount1);
+
+        IFlashCallback(msg.sender).flashCallback(fee0, fee1, data);
+
+        uint256 balance0After = IERC20(derivatives[0]).balanceOf(address(this));
+        uint256 balance1After = IERC20(derivatives[1]).balanceOf(address(this));
+
+        require(balance0Before.add(fee0) <= balance0After, 'Curve/insufficient-token0-returned');
+        require(balance1Before.add(fee1) <= balance1After, 'Curve/insufficient-token1-returned');
+
+        // sub is safe because we know balanceAfter is gt balanceBefore by at least fee
+        uint256 paid0 = balance0After - balance0Before;
+        uint256 paid1 = balance1After - balance1Before;
+
+        IERC20(derivatives[0]).safeTransfer(owner, paid0);        
+        IERC20(derivatives[1]).safeTransfer(owner, paid1);        
+
+        emit Flash(msg.sender, recipient, amount0, amount1, paid0, paid1);
+    }    
 
     /// @notice view the curve token balance of a given account
     /// @param _account the account to view the balance of
