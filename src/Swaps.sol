@@ -49,11 +49,6 @@ library Swaps {
     function originSwap(Storage.Curve storage curve, OriginSwapData memory _swapData)
         external
         returns (
-            // address _origin,
-            // address _target,
-            // uint256 _originAmount,
-            // address _recipient,
-            // address _curveFactory
             uint256 tAmt_
         )
     {
@@ -112,11 +107,6 @@ library Swaps {
     function targetSwap(Storage.Curve storage curve, TargetSwapData memory _swapData)
         external
         returns (
-            // address _origin,
-            // address _target,
-            // uint256 _targetAmount,
-            // address _recipient,
-            // address _curveFactory
             uint256 oAmt_
         )
     {
