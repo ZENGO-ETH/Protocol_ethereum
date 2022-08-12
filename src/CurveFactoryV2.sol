@@ -35,7 +35,7 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
     IAssimilatorFactory public immutable assimilatorFactory;
 
     // add protocol fee
-    int128 public totoalFeePercentage = 100;
+    int128 public totoalFeePercentage = 100000;
     int128 public protocolFee;
     address public protocolTreasury;
 
