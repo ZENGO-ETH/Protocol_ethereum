@@ -11,6 +11,7 @@ library Mainnet {
     address public constant XSGD = 0x70e8dE73cE538DA2bEEd35d14187F6959a8ecA96;
     address public constant NZDS = 0xDa446fAd08277B4D2591536F204E018f32B6831c;
     address public constant RAI = 0x03ab458634910AaD20eF5f1C8ee96F1D6ac54919;
+
     // Oracles
     // 8-decimals
     address public constant CHAINLINK_WETH_USD = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;

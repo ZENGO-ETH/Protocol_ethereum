@@ -23,6 +23,4 @@ interface IERC20Detailed is IERC20 {
     function symbol() external returns (string memory);
 
     function decimals() external returns (uint8);
-
-    function mint (address _a, uint256 _b) external;
 }

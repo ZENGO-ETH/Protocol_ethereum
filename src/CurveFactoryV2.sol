@@ -51,12 +51,12 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
         address _treasury,
         address _assimFactory
     ) {
-        require(totoalFeePercentage >= _protocolFee, "protocol fee can't be over 100%");
-        require(_treasury != address(0), "invalid treasury address");
+        require(totoalFeePercentage >= _protocolFee, "CurveFactory/protocol-fee-cannot-be-over-100-percent");
+        require(_treasury != address(0), "CurveFactory/zero-treasury-address");
         protocolFee = _protocolFee;
         protocolTreasury = _treasury;
 
-        require(_assimFactory.isContract(), "invalid assimilatorFactory");
+        require(_assimFactory.isContract(), "CurveFactory/invalid-assimilatorFactory");
         assimilatorFactory = IAssimilatorFactory(_assimFactory);
     }
 
@@ -69,21 +69,21 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
     }
 
     function updateProtocolTreasury(address _newTreasury) external onlyOwner {
-        require(_newTreasury != protocolTreasury, "same treasury address!");
-        require(_newTreasury != address(0), "invalid treasury address!");
+        require(_newTreasury != protocolTreasury, "CurveFactory/same-treasury-address");
+        require(_newTreasury != address(0), "CurveFactory/zero-treasury-address");
         protocolTreasury = _newTreasury;
         emit TreasuryUpdated(protocolTreasury);
     }
 
     function updateProtocolFee(int128 _newFee) external onlyOwner {
-        require(totoalFeePercentage >= _newFee, "protocol fee can't be over 100%");
-        require(_newFee != protocolFee, "same protocol fee!");
+        require(totoalFeePercentage >= _newFee, "CurveFactory/protocol-fee-cannot-be-over-100-percent");
+        require(_newFee != protocolFee, "CurveFactory/same-protocol-fee");
         protocolFee = _newFee;
         emit ProtocolFeeUpdated(protocolTreasury, protocolFee);
     }
 
-    function getCurve(address _token) external view returns (address) {
-        bytes32 curveId = keccak256(abi.encode(_token));
+    function getCurve(address _baseCurrency, address _quoteCurrency) external view returns (address) {
+        bytes32 curveId = keccak256(abi.encode(_baseCurrency, _quoteCurrency));
         return (curves[curveId]);
     }
 
