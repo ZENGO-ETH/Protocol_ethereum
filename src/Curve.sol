@@ -238,6 +238,7 @@ library Curves {
 
 contract Curve is Storage, MerkleProver, NoDelegateCall {
     using SafeMath for uint256;
+    using ABDKMath64x64 for int128;
     using SafeERC20 for IERC20;
 
     address private curveFactory;
@@ -624,13 +625,13 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         uint256 amount1,
         bytes calldata data
     ) external transactable noDelegateCall {
-        uint256 fee = uint256(uint128(ICurveFactory(curveFactory).getProtocolFee()));
+        uint256 fee = curve.epsilon.mulu(1e18);
         
         require(IERC20(derivatives[0]).balanceOf(address(this)) > 0, 'Curve/token0-zero-liquidity-depth');
         require(IERC20(derivatives[1]).balanceOf(address(this)) > 0, 'Curve/token1-zero-liquidity-depth');
         
-        uint256 fee0 = FullMath.mulDivRoundingUp(amount0, fee, 1e6);
-        uint256 fee1 = FullMath.mulDivRoundingUp(amount1, fee, 1e6);
+        uint256 fee0 = FullMath.mulDivRoundingUp(amount0, fee, 1e18);
+        uint256 fee1 = FullMath.mulDivRoundingUp(amount1, fee, 1e18);
         uint256 balance0Before = IERC20(derivatives[0]).balanceOf(address(this));
         uint256 balance1Before = IERC20(derivatives[1]).balanceOf(address(this));
 
