@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.13;
 
 import "./Assimilators.sol";
 
@@ -66,8 +66,8 @@ library ProportionalLiquidity {
         int128 _newShells = __deposit;
 
         if (_totalShells > 0) {
-            _newShells = __deposit.div(_oGLiq);
-            _newShells = _newShells.mul(_totalShells);
+            _newShells = __deposit.mul(_totalShells);
+            _newShells = _newShells.div(_oGLiq);
         }
 
         mint(curve, msg.sender, curves_ = _newShells.mulu(1e18));
@@ -120,8 +120,8 @@ library ProportionalLiquidity {
         int128 _newShells = __deposit;
 
         if (_totalShells > 0) {
-            _newShells = __deposit.div(_oGLiq);
-            _newShells = _newShells.mul(_totalShells);
+            _newShells = __deposit.mul(_totalShells);
+            _newShells = _newShells.div(_oGLiq);
         }
 
         curves_ = _newShells.mulu(1e18);
