@@ -76,7 +76,7 @@ library Swaps {
         _swapInfo.totalFee = _swapInfo.totalAmount + _swapInfo.amountToUser;
         _swapInfo.protocolFeePercentage = _swapInfo.curveFactory.getProtocolFee();
         _swapInfo.treasury = _swapInfo.curveFactory.getProtocolTreasury();
-        _swapInfo.amountToTreasury = _swapInfo.totalFee.muli(_swapInfo.protocolFeePercentage).divi(100);
+        _swapInfo.amountToTreasury = _swapInfo.totalFee.muli(_swapInfo.protocolFeePercentage).divi(100000);
         Assimilators.transferFee(_t.addr, _swapInfo.amountToTreasury, _swapInfo.treasury);
         tAmt_ = Assimilators.outputNumeraire(_t.addr, _swapData._recipient, _swapInfo.amountToUser);
 
@@ -153,7 +153,7 @@ library Swaps {
         _swapInfo.totalFee = _swapInfo.amountToUser - _amt;
         _swapInfo.protocolFeePercentage = _swapInfo.curveFactory.getProtocolFee();
         _swapInfo.treasury = _swapInfo.curveFactory.getProtocolTreasury();
-        _swapInfo.amountToTreasury = _swapInfo.totalFee.us_div(100).mul(_swapInfo.protocolFeePercentage);
+        _swapInfo.amountToTreasury = _swapInfo.totalFee.muli(_swapInfo.protocolFeePercentage).divi(100000);
 
         Assimilators.transferFee(_o.addr, _swapInfo.amountToTreasury, _swapInfo.treasury);
 

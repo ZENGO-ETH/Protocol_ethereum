@@ -72,7 +72,7 @@ contract V2Test is Test {
         // deploy new assimilator factory & curveFactory v2
         assimFactory = new AssimilatorFactory();
         curveFactory = new CurveFactoryV2(
-            50, address(accounts[2]), address(assimFactory)
+            50000, address(accounts[2]), address(assimFactory)
         );
         assimFactory.setCurveFactory(address(curveFactory));
         // now deploy curves
