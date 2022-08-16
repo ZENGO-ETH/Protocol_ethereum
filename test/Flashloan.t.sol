@@ -151,7 +151,8 @@ contract FlashloanTest is Test {
         cheats.assume(flashAmount1 > 0);
         cheats.assume(flashAmount1 < 10_000_000);
 
-        uint256 fee = uint256(uint128(protocolFee));
+        // epsilon
+        (,,,uint256 fee,) = curve.viewCurve();
 
         uint256 dec0 = utils.tenToPowerOf(token0.decimals());
         uint256 dec1 = utils.tenToPowerOf(token1.decimals());
@@ -172,12 +173,12 @@ contract FlashloanTest is Test {
         });
 
         curveFlash.initFlash(address(curve), flashData);
-        
+
         uint256 derivative0After = token0.balanceOf(address(curve));
         uint256 derivative1After = token1.balanceOf(address(curve));
 
-        uint256 generatedFee0 = FullMath.mulDivRoundingUp(flashData.amount0, fee, 1e6);
-        uint256 generatedFee1 = FullMath.mulDivRoundingUp(flashData.amount1, fee, 1e6);
+        uint256 generatedFee0 = FullMath.mulDivRoundingUp(flashData.amount0, fee, 1e18);
+        uint256 generatedFee1 = FullMath.mulDivRoundingUp(flashData.amount1, fee, 1e18);
 
         // Should transfer the ownership to multisig tho
         assertEq(generatedFee0, token0.balanceOf(address(this)));
@@ -197,7 +198,7 @@ contract FlashloanTest is Test {
         cheats.assume(flashAmount1 > 0);
         cheats.assume(flashAmount1 < 10_000_000);
 
-        uint256 fee = uint256(uint128(protocolFee));
+        (,,,uint256 fee,) = curve.viewCurve();
 
         uint256 dec0 = utils.tenToPowerOf(token0.decimals());
         uint256 dec1 = utils.tenToPowerOf(token1.decimals());
@@ -222,8 +223,8 @@ contract FlashloanTest is Test {
         uint256 derivative0After = token0.balanceOf(address(curve));
         uint256 derivative1After = token1.balanceOf(address(curve));
 
-        uint256 generatedFee0 = FullMath.mulDivRoundingUp(flashData.amount0, fee, 1e6);
-        uint256 generatedFee1 = FullMath.mulDivRoundingUp(flashData.amount1, fee, 1e6);
+        uint256 generatedFee0 = FullMath.mulDivRoundingUp(flashData.amount0, fee, 1e18);
+        uint256 generatedFee1 = FullMath.mulDivRoundingUp(flashData.amount1, fee, 1e18);
 
         // Should transfer the ownership to multisig tho
         assertEq(generatedFee0, token0.balanceOf(address(this)));
@@ -243,7 +244,7 @@ contract FlashloanTest is Test {
         cheats.assume(flashAmount1 > 0);
         cheats.assume(flashAmount1 < 10_000_000);
 
-        uint256 fee = uint256(uint128(protocolFee));
+        (,,,uint256 fee,) = curve.viewCurve();
 
         uint256 dec0 = utils.tenToPowerOf(token0.decimals());
         uint256 dec1 = utils.tenToPowerOf(token1.decimals());
@@ -268,8 +269,8 @@ contract FlashloanTest is Test {
         uint256 derivative0After = token0.balanceOf(address(curve));
         uint256 derivative1After = token1.balanceOf(address(curve));
 
-        uint256 generatedFee0 = FullMath.mulDivRoundingUp(flashData.amount0, fee, 1e6);
-        uint256 generatedFee1 = FullMath.mulDivRoundingUp(flashData.amount1, fee, 1e6);
+        uint256 generatedFee0 = FullMath.mulDivRoundingUp(flashData.amount0, fee, 1e18);
+        uint256 generatedFee1 = FullMath.mulDivRoundingUp(flashData.amount1, fee, 1e18);
 
         // Should transfer the ownership to multisig tho
         assertEq(generatedFee0, token0.balanceOf(address(this)));
@@ -279,7 +280,7 @@ contract FlashloanTest is Test {
         assertGe(derivative1After, derivative1Before);
     }
 
-    function testFail_FlashloanFeeCadc(uint256 flashAmount0, uint256 flashAmount1, uint256 flashFee) public {
+    function testFail_FlashloanFeeCadc(uint256 flashAmount0, uint256 flashAmount1) public {
         IERC20Detailed token0 = cadc;
         IERC20Detailed token1 = usdc;
         Curve curve = dfxCurves[0];
@@ -288,15 +289,15 @@ contract FlashloanTest is Test {
         cheats.assume(flashAmount0 < 10_000_000);
         cheats.assume(flashAmount1 > 0);
         cheats.assume(flashAmount1 < 10_000_000);
-        cheats.assume(flashFee > 0);
-        cheats.assume(flashFee < 100);
+
+        (,,,uint256 flashFee,) = curve.viewCurve();
 
         uint256 dec0 = utils.tenToPowerOf(token0.decimals());
         uint256 dec1 = utils.tenToPowerOf(token1.decimals());
 
         // Dealing less than what can be paid back
-        uint256 dealAmount0 = flashAmount0.mul(flashFee).div(1e6).sub(uint(1));
-        uint256 dealAmount1 = flashAmount1.mul(flashFee).div(1e6).sub(uint(1));
+        uint256 dealAmount0 = flashAmount0.mul(flashFee).div(1e18).sub(uint(1));
+        uint256 dealAmount1 = flashAmount1.mul(flashFee).div(1e18).sub(uint(1));
         deal(address(token0), address(curveFlash), dealAmount0.mul(dec0));
         deal(address(token1), address(curveFlash), dealAmount1.mul(dec1));
 
@@ -312,7 +313,7 @@ contract FlashloanTest is Test {
         curveFlash.initFlash(address(curve), flashData);
     }
 
-    function testFail_FlashloanFeeXsgd(uint256 flashAmount0, uint256 flashAmount1, uint256 flashFee) public {
+    function testFail_FlashloanFeeXsgd(uint256 flashAmount0, uint256 flashAmount1) public {
         IERC20Detailed token0 = xsgd;
         IERC20Detailed token1 = usdc;
         Curve curve = dfxCurves[1];
@@ -321,15 +322,15 @@ contract FlashloanTest is Test {
         cheats.assume(flashAmount0 < 10_000_000);
         cheats.assume(flashAmount1 > 0);
         cheats.assume(flashAmount1 < 10_000_000);
-        cheats.assume(flashFee > 0);
-        cheats.assume(flashFee < 100);
+
+        (,,,uint256 flashFee,) = curve.viewCurve();
 
         uint256 dec0 = utils.tenToPowerOf(token0.decimals());
         uint256 dec1 = utils.tenToPowerOf(token1.decimals());
 
         // Dealing less than what can be paid back
-        uint256 dealAmount0 = flashAmount0.mul(flashFee).div(1e6).sub(uint(1));
-        uint256 dealAmount1 = flashAmount1.mul(flashFee).div(1e6).sub(uint(1));
+        uint256 dealAmount0 = flashAmount0.mul(flashFee).div(1e18).sub(uint(1));
+        uint256 dealAmount1 = flashAmount1.mul(flashFee).div(1e18).sub(uint(1));
         deal(address(token0), address(curveFlash), dealAmount0.mul(dec0));
         deal(address(token1), address(curveFlash), dealAmount1.mul(dec1));
 
@@ -345,7 +346,7 @@ contract FlashloanTest is Test {
         curveFlash.initFlash(address(curve), flashData);
     }
 
-    function testFail_FlashloanFeeEuroc(uint256 flashAmount0, uint256 flashAmount1, uint256 flashFee) public {
+    function testFail_FlashloanFeeEuroc(uint256 flashAmount0, uint256 flashAmount1) public {
         IERC20Detailed token0 = euroc;
         IERC20Detailed token1 = usdc;
         Curve curve = dfxCurves[2];
@@ -354,15 +355,15 @@ contract FlashloanTest is Test {
         cheats.assume(flashAmount0 < 10_000_000);
         cheats.assume(flashAmount1 > 0);
         cheats.assume(flashAmount1 < 10_000_000);
-        cheats.assume(flashFee > 0);
-        cheats.assume(flashFee < 100);
+    
+        (,,,uint256 flashFee,) = curve.viewCurve();
 
         uint256 dec0 = utils.tenToPowerOf(token0.decimals());
         uint256 dec1 = utils.tenToPowerOf(token1.decimals());
 
         // Dealing less than what can be paid back
-        uint256 dealAmount0 = flashAmount0.mul(flashFee).div(1e6).sub(uint(1));
-        uint256 dealAmount1 = flashAmount1.mul(flashFee).div(1e6).sub(uint(1));
+        uint256 dealAmount0 = flashAmount0.mul(flashFee).div(1e18).sub(uint(1));
+        uint256 dealAmount1 = flashAmount1.mul(flashFee).div(1e18).sub(uint(1));
         deal(address(token0), address(curveFlash), dealAmount0.mul(dec0));
         deal(address(token1), address(curveFlash), dealAmount1.mul(dec1));
 
@@ -377,7 +378,7 @@ contract FlashloanTest is Test {
 
         curveFlash.initFlash(address(curve), flashData);
     }
-
+    
     function testFail_FlashloanCurveDepthCadc(uint256 flashAmount0, uint256 flashAmount1) public {
         IERC20Detailed token0 = cadc;
         IERC20Detailed token1 = usdc;
