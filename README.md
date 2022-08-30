@@ -65,7 +65,7 @@ Flashloans live in every curve contract produced by the CurveFactory. DFX curve 
 
 
 ## Test Locally
-1. Install Foundy
+1. Install Foundry
 
    - [Foundry Docs](https://jamesbachini.com/foundry-tutorial/)
 
