@@ -148,7 +148,7 @@ Flashloans live in every curve contract produced by the CurveFactory. DFX curve 
     - the test is repeated for already exisiting stablecoins including CADC, EUROC, XSGD to test their varying decimal places as well as run through extensive fuzzing
 
 2. testFail_FlashloanFee
-    - this tests fails upon a user calling the flash function does not have enough funds to pay back the original loan including fees
+    - this tests fails upon a user calling the flash function and does not have enough funds to pay back the original loan including fees
     - the test is repeated for already exisiting stablecoins including CADC, EUROC, XSGD to test their varying decimal places as well as run through extensive fuzzing
 
 3. testFail_FlashloanCurveDepth
@@ -160,7 +160,7 @@ Flashloans live in every curve contract produced by the CurveFactory. DFX curve 
     - this test ensures already exisiting pairs cannot be added to avoid duplicates
 
 2. testNewPairs
-    - this test ensures that new pairs can be properly added with the respective addresses correct
+    - this test ensures that new pairs can be properly added as long as they dont already exist
 
 3. testUpdateFee
     - this test ensures protocol fee can be updated properly as long as it is within the correct range of 0 to 100% in 6 decimals
