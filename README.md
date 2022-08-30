@@ -7,7 +7,7 @@ A decentralized foreign exchange protocol optimized for stablecoins.
 
 ## Overview
 
-DFX v2 is an update from DFX protocol v0.5 with some additional features including the protocol fee, which is set by the percentage of the platform fee(which incurs for each swap on all the pools across the platform), fixing issues of invariant check. The major change from the previous version is, V2 is more generalized for users, meaning anybody can create their curves(pools) while V0.5 only allowed the DFX team to create pools.
+DFX v2 is an update from DFX protocol v0.5 with some additional features including the protocol fee, which is set by the percentage of the platform fee(which incurs for each swap on all the pools across the platform), fixing issues of invariant check, and the support of flashloans. The major change from the previous version is, V2 is more generalized for users, meaning anybody can create their curves(pools) while V0.5 only allowed the DFX team to create pools.
 
 There are two major parts to the protocol: **Assimilators** and **Curves**. Assimilators allow the AMM to handle pairs of different value while also retrieving reported oracle prices for respective currencies. Curves allow the custom parameterization of the bonding curve with dynamic fees, halting bounderies, etc.
 
@@ -54,6 +54,9 @@ This is achieved by having custom assimilators that normalize the foreign curren
 
 Withdrawing and depositing related operations will respect the existing LP ratio. As long as the pool ratio hasn't changed since the deposit, amount in ~= amount out (minus fees), even if the reported price on the oracle changes. The oracle is only here to assist with efficient swaps.
 
+#### Flashloans
+Flashloans live in every curve contract produced by the CurveFactory. DFX curve flash function is based on the the flashloan model in UniswapV2. The user calling flash function must conform to the `IFlash.sol` interface. It must containing their own logic along with code to return the correct amount of tokens requested along with its respective fee. Flash function will check for the balances of the curve before and after to ensure that the correct amount of fees has been sent to the treasury as well as funds returned back to the curve. 
+
 ## Third Party Libraries
 
 - [Openzeppelin contracts (v3.3.0)](https://github.com/OpenZeppelin/openzeppelin-contracts/releases/tag/v3.3.0)
@@ -62,7 +65,6 @@ Withdrawing and depositing related operations will respect the existing LP ratio
 
 
 ## Test Locally
-
 1. Install Foundy
 
    - [Foundry Docs](https://jamesbachini.com/foundry-tutorial/)
@@ -90,7 +92,7 @@ Withdrawing and depositing related operations will respect the existing LP ratio
     ```
 
 ## Test Cases
-
+### ```V2.t.sol```
 1. testDeployTokenAndSwap
 
     - deploy a random erc20 token (we call it `gold` token) and it's price oralce (`gold oracle`), gold : usdc ratio is set to 1:20 in the test
@@ -117,7 +119,8 @@ Withdrawing and depositing related operations will respect the existing LP ratio
 5. testInvariant
 
     - this test ensures anybody can deposit any amount of LPs to the curve
-6. testProtocolFeeUsdcCadcSwap
+### ```ProtocolFee.t.sol```
+1. testProtocolFeeUsdcCadcSwap
 
     - For each trade on DFX, platform fee is applied, it is set by Epsilon when deploying the curve
     - platform fee is splitted into 2 parts, some of the fee is sent back to the pool, while rest amount is sent to the protocol's treasury address (we call this `protocol fee`)
@@ -125,4 +128,45 @@ Withdrawing and depositing related operations will respect the existing LP ratio
     ```
     protocol fee = platform fee * CurveFactoryV2.protocolFee / 100000
     ```
-    if protocolFee is set to 50000, then the platform fee is divided evenly to the treasury & curve
+    if protocolFee is set to 50,000 (50% because of 6 decimal places), then the platform fee is divided evenly to the treasury & curve
+### ```Router.t.sol```
+1. testTargetSwap
+    - Swaps a dynamic origin amount for a fixed target amount
+    - this test checks if the swapped amount is correct within 99% accuracy by multiplying the requested amount at the foriegn exchange rate pulled from chainlink oracles
+    - the test is repeated for trading unlike pairs to test their varying decimal places such as CADC -> XSGD, CADC -> EUROC, CADC -> USDC etc. as well as run through extensive fuzzing
+
+2. testOriginSwap
+    - Swaps a fixed origin amount for a dynamic target amount
+    - this test checks if the swapped amount is correct within 99% accuracy by multiplying the requested amount at the foriegn exchange rate pulled from chainlink oracles
+    - the test is repeated for trading unlike pairs to test their varying decimal places such as CADC -> XSGD, CADC -> EUROC, CADC -> USDC etc. as well as run through extensive fuzzing
+
+### ```Flashloan.t.sol```
+1. testFlashloan
+    - this test ensures the correct amount of stablecoins requested to be flashloaned from any DFX curves is correctly transfered to the contract calling the `flash` function
+    - it also checks the correct amount of fees owed proportional to the epsilon value within the curve mutiplied by the amount borrowed is sent directly to the treasury
+    - last sanity check is to check that the balance of USDC and the respective foreign stablecoin in the pool is equal or greater than before the flashloan was conducted 
+    - the test is repeated for already exisiting stablecoins including CADC, EUROC, XSGD to test their varying decimal places as well as run through extensive fuzzing
+
+2. testFail_FlashloanFee
+    - this tests fails upon a user calling the flash function does not have enough funds to pay back the original loan including fees
+    - the test is repeated for already exisiting stablecoins including CADC, EUROC, XSGD to test their varying decimal places as well as run through extensive fuzzing
+
+3. testFail_FlashloanCurveDepth
+    - this tests fails upon a user calling the flash function and the curve not having enough funds to lend to the user
+    - the test is repeated for already exisiting stablecoins including CADC, EUROC, XSGD to test their varying decimal places as well as run through extensive fuzzing
+
+### ```CurveFactoryV2.t.sol```
+1. testFailDuplicatePairs
+    - this test ensures already exisiting pairs cannot be added to avoid duplicates
+
+2. testNewPairs
+    - this test ensures that new pairs can be properly added with the respective addresses correct
+
+3. testUpdateFee
+    - this test ensures protocol fee can be updated properly as long as it is within the correct range of 0 to 100% in 6 decimals
+
+4. testFailUpdateFee
+    - this test ensures trying to update the protocol fee to a new fee higher than 100% will revert in 6 decimals
+
+5. testUpdateTreasury
+    - this test ensures the protocol treasury address can be updated properly to a new address

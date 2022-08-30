@@ -111,26 +111,19 @@ contract CurveFactoryV2Test is Test {
     }
 
     function testUpdateFee() public {
-        int128 newFee = 100;
+        int128 newFee = 100_000;
         curveFactory.updateProtocolFee(newFee);
         assertEq(newFee, curveFactory.getProtocolFee());
     }
 
     function testFailUpdateFee() public {
-        int128 newFee = 101;
+        int128 newFee = 100_001;
         curveFactory.updateProtocolFee(newFee);
-        fail("CurveFactory/currency-pair-already-exists");
     }
 
     function testUpdateTreasury() public {
         assertEq(address(treasury), curveFactory.getProtocolTreasury());
         curveFactory.updateProtocolTreasury(address(newTreasury));
         assertEq(address(newTreasury), curveFactory.getProtocolTreasury());
-    }
-
-    function testFailUpdateTreasury() public {
-        assertEq(address(treasury), curveFactory.getProtocolTreasury());
-        curveFactory.updateProtocolTreasury(address(newTreasury));
-        fail("CurveFactory/currency-pair-already-exists");
     }
 }
