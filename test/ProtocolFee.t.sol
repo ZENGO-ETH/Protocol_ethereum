@@ -122,10 +122,10 @@ contract ProtocolFeeTest is Test {
         cheats.stopPrank();
     }
     
-    function testProtocolFeeUsdcCadcSwap () public {
-        // cheats.assume(mintAmount > 10000);
-        // cheats.assume(mintAmount < 10000000);
-        uint256 mintAmount = 10396;
+    function testProtocolFeeUsdcCadcSwap(uint256 mintAmount) public {
+        cheats.assume(mintAmount > 10000);
+        cheats.assume(mintAmount < 10000000);
+
         for(uint256 i = 0 ; i < 3; ++i){
 
             deal(address(tokens[i]), address(accounts[1]), mintAmount * decimals[i]);
