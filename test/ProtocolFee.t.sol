@@ -125,7 +125,7 @@ contract ProtocolFeeTest is Test {
     function testProtocolFeeUsdcCadcSwap(uint256 mintAmount) public {
         cheats.assume(mintAmount > 10000);
         cheats.assume(mintAmount < 10000000);
-
+        
         for(uint256 i = 0 ; i < 3; ++i){
 
             deal(address(tokens[i]), address(accounts[1]), mintAmount * decimals[i]);
@@ -181,12 +181,12 @@ contract ProtocolFeeTest is Test {
             assertApproxEqAbs(
                 (trader2ndUsdcBal+treasury2ndUsdcBal).div(treasury2ndUsdcBal),
                 5000,
-                155
+                160
             );
             assertApproxEqAbs(
                 (trader2ndTokeniBal+treasury2ndTokeniBal).div(treasury2ndTokeniBal),
                 5000,
-                155
+                160
             );
         }
     }
