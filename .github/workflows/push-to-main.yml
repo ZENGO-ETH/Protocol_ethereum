@@ -25,4 +25,4 @@ jobs:
         # run: ./test.sh -p super_deep
         run: |
           forge clean
-          forge test --optimize --optimizer-runs 1000000 -v -f https://mainnet.infura.io/v3/406b22e3688c42898054d22555f43271 --fork-block-number 15129966
+          forge test --optimize --optimizer-runs 1000000 -v -f https://eth-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_API_KEY }} --fork-block-number 15129966

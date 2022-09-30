@@ -7,7 +7,7 @@ import "./interfaces/IAssimilatorFactory.sol";
 import "./interfaces/IOracle.sol";
 
 contract AssimilatorFactory is IAssimilatorFactory, Ownable {
-    event NewAssimilator(address indexed caller, bytes32 indexed id, address indexed assimilator);
+    event NewAssimilator(address indexed caller, bytes32 indexed id, address indexed assimilator, address oracle, address token);
     event AssimilatorRevoked(address indexed caller, bytes32 indexed id, address indexed assimilator);
     event CurveFactoryUpdated(address indexed caller, address indexed curveFactory);
     mapping(bytes32 => AssimilatorV2) public assimilators;
@@ -36,10 +36,10 @@ contract AssimilatorFactory is IAssimilatorFactory, Ownable {
     ) external override onlyCurveFactory returns (AssimilatorV2) {
         bytes32 assimilatorID = keccak256(abi.encode(_token));
         if (address(assimilators[assimilatorID]) != address(0))
-            revert("AssimilatorFactory/currency-pair-already-exists");
+            revert("AssimilatorFactory/oracle-stablecoin-pair-already-exists");
         AssimilatorV2 assimilator = new AssimilatorV2(_oracle, _token, _tokenDecimals, IOracle(_oracle).decimals());
         assimilators[assimilatorID] = assimilator;
-        emit NewAssimilator(msg.sender, assimilatorID, address(assimilator));
+        emit NewAssimilator(msg.sender, assimilatorID, address(assimilator), _oracle, _token);
         return assimilator;
     }
 

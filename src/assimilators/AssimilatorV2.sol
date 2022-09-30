@@ -15,6 +15,7 @@
 
 pragma solidity ^0.8.13;
 
+import "../../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "../../lib/openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
 
@@ -27,6 +28,7 @@ contract AssimilatorV2 is IAssimilator {
     using ABDKMath64x64 for uint256;
 
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     IERC20 private constant usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
 
@@ -55,9 +57,7 @@ contract AssimilatorV2 is IAssimilator {
 
     // takes raw eurs amount, transfers it in, calculates corresponding numeraire amount and returns it
     function intakeRawAndGetBalance(uint256 _amount) external override returns (int128 amount_, int128 balance_) {
-        bool _transferSuccess = token.transferFrom(msg.sender, address(this), _amount);
-
-        require(_transferSuccess, "Curve/Token-transfer-from-failed");
+        token.safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 _balance = token.balanceOf(address(this));
 
@@ -70,10 +70,8 @@ contract AssimilatorV2 is IAssimilator {
 
     // takes raw eurs amount, transfers it in, calculates corresponding numeraire amount and returns it
     function intakeRaw(uint256 _amount) external override returns (int128 amount_) {
-        bool _transferSuccess = token.transferFrom(msg.sender, address(this), _amount);
-
-        require(_transferSuccess, "Curve/Token-transfer-from-failed");
-
+        token.safeTransferFrom(msg.sender, address(this), _amount);
+        
         uint256 _rate = getRate();
 
         amount_ = ((_amount * _rate) / 10**oracleDecimals).divu(10**tokenDecimals);
@@ -85,9 +83,7 @@ contract AssimilatorV2 is IAssimilator {
 
         amount_ = (_amount.mulu(10**tokenDecimals) * 10**oracleDecimals) / _rate;
 
-        bool _transferSuccess = token.transferFrom(msg.sender, address(this), amount_);
-
-        require(_transferSuccess, "Curve/Token-transfer-from-failed");
+        token.safeTransferFrom(msg.sender, address(this), amount_);
     }
 
     // takes a numeraire amount, calculates the raw amount of eurs, transfers it in and returns the corresponding raw amount
@@ -110,9 +106,7 @@ contract AssimilatorV2 is IAssimilator {
 
         amount_ = (_amount.mulu(10**tokenDecimals) * 1e6) / _rate;
 
-        bool _transferSuccess = token.transferFrom(msg.sender, address(this), amount_);
-
-        require(_transferSuccess, "Curve/Token-transfer-from-failed");
+        token.safeTransferFrom(msg.sender, address(this), amount_);
     }
 
     // takes a raw amount of eurs and transfers it out, returns numeraire value of the raw amount
@@ -125,9 +119,7 @@ contract AssimilatorV2 is IAssimilator {
 
         uint256 _tokenAmount = ((_amount) * _rate) / 10**oracleDecimals;
 
-        bool _transferSuccess = token.transfer(_dst, _tokenAmount);
-
-        require(_transferSuccess, "Curve/Token-transfer-failed");
+        token.safeTransfer(_dst, _tokenAmount);
 
         uint256 _balance = token.balanceOf(address(this));
 
@@ -142,9 +134,7 @@ contract AssimilatorV2 is IAssimilator {
 
         uint256 _tokenAmount = (_amount * _rate) / 10**oracleDecimals;
 
-        bool _transferSuccess = token.transfer(_dst, _tokenAmount);
-
-        require(_transferSuccess, "Curve/Token-transfer-failed");
+        token.safeTransfer(_dst, _tokenAmount);
 
         amount_ = _tokenAmount.divu(10**tokenDecimals);
     }
@@ -155,9 +145,7 @@ contract AssimilatorV2 is IAssimilator {
 
         amount_ = (_amount.mulu(10**tokenDecimals) * 10**oracleDecimals) / _rate;
 
-        bool _transferSuccess = token.transfer(_dst, amount_);
-
-        require(_transferSuccess, "Curve/Token-transfer-failed");
+        token.safeTransfer(_dst, amount_);
     }
 
     // takes a numeraire amount and returns the raw amount
@@ -247,7 +235,6 @@ contract AssimilatorV2 is IAssimilator {
         uint256 _rate = getRate();
         if(_amount < 0) _amount = - (_amount);
         uint256 amount = (_amount.mulu(10**tokenDecimals) * 10**oracleDecimals) / _rate;
-        transferSuccess_ = token.transfer(_treasury, amount);
-        require(transferSuccess_, "fee transfer failed");
+        token.safeTransfer(_treasury, amount);
     }
 }
