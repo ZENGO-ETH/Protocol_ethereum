@@ -176,6 +176,31 @@ library Orchestrator {
         }
     }
 
+    function includeAssimilator(
+        Storage.Curve storage curve,
+        address _derivative,
+        address _numeraire,
+        address _reserve,
+        address _assimilator,
+        address _derivativeApproveTo
+    ) private {
+        require(_derivative != address(0), "Curve/derivative-cannot-be-zeroth-address");
+
+        require(_numeraire != address(0), "Curve/numeraire-cannot-be-zeroth-address");
+
+        require(_reserve != address(0), "Curve/numeraire-cannot-be-zeroth-address");
+
+        require(_assimilator != address(0), "Curve/assimilator-cannot-be-zeroth-address");
+
+        IERC20(_numeraire).safeApprove(_derivativeApproveTo, type(uint).max);
+
+        Storage.Assimilator storage _numeraireAssim = curve.assimilators[_numeraire];
+
+        curve.assimilators[_derivative] = Storage.Assimilator(_assimilator, _numeraireAssim.ix);
+
+        emit AssimilatorIncluded(_derivative, _numeraire, _reserve, _assimilator);
+    }
+
     function viewCurve(Storage.Curve storage curve)
         external
         view

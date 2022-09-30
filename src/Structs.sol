@@ -40,9 +40,4 @@ struct CurveInfo {
     uint256 _baseDec;
     address _quoteOracle;
     uint256 _quoteDec;
-    uint256 _alpha;
-    uint256 _beta;
-    uint256 _feeAtHalt;
-    uint256 _epsilon;
-    uint256 _lambda;
 }
