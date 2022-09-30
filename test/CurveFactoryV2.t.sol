@@ -47,6 +47,7 @@ contract CurveFactoryV2Test is Test {
 
         assimilatorFactory.setCurveFactory(address(curveFactory));
 
+        cheats.startPrank(address(treasury));
         CurveInfo memory curveInfo = CurveInfo(
             string.concat("dfx-", cadc.name()),
             string.concat("dfx-", cadc.symbol()),
@@ -54,21 +55,20 @@ contract CurveFactoryV2Test is Test {
             address(usdc),
             DefaultCurve.BASE_WEIGHT,
             DefaultCurve.QUOTE_WEIGHT,
-            address(cadcOracle),
+            cadcOracle,
             cadc.decimals(),
-            address(usdcOracle),
-            usdc.decimals()
-        );
-
-        dfxCadcCurve = curveFactory.newCurve(curveInfo);
-        dfxCadcCurve.setParams(
+            usdcOracle,
+            usdc.decimals(),
             DefaultCurve.ALPHA,
             DefaultCurve.BETA,
             DefaultCurve.MAX,
             DefaultCurve.EPSILON,
             DefaultCurve.LAMBDA
         );
+
+        dfxCadcCurve = curveFactory.newCurve(curveInfo);
         dfxCadcCurve.turnOffWhitelisting();
+        cheats.stopPrank();
     }
 
     function testFailDuplicatePairs() public {
@@ -79,10 +79,15 @@ contract CurveFactoryV2Test is Test {
             address(usdc),
             DefaultCurve.BASE_WEIGHT,
             DefaultCurve.QUOTE_WEIGHT,
-            address(cadcOracle),
+            cadcOracle,
             cadc.decimals(),
-            address(usdcOracle),
-            usdc.decimals()
+            usdcOracle,
+            usdc.decimals(),
+            DefaultCurve.ALPHA,
+            DefaultCurve.BETA,
+            DefaultCurve.MAX,
+            DefaultCurve.EPSILON,
+            DefaultCurve.LAMBDA
         );
         dfxCadcCurve = curveFactory.newCurve(curveInfo);
         fail("CurveFactory/currency-pair-already-exists");
@@ -96,10 +101,15 @@ contract CurveFactoryV2Test is Test {
             address(usdc),
             DefaultCurve.BASE_WEIGHT,
             DefaultCurve.QUOTE_WEIGHT,
-            address(eurocOracle),
+            eurocOracle,
             euroc.decimals(),
-            address(usdcOracle),
-            usdc.decimals()
+            usdcOracle,
+            usdc.decimals(),
+            DefaultCurve.ALPHA,
+            DefaultCurve.BETA,
+            DefaultCurve.MAX,
+            DefaultCurve.EPSILON,
+            DefaultCurve.LAMBDA
         );
         dfxEurocCurve = curveFactory.newCurve(curveInfo);
 

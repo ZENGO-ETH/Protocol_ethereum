@@ -13,6 +13,7 @@ import "../src/CurveFactoryV2.sol";
 import "../src/Curve.sol";
 import "../src/Structs.sol";
 import "../src/lib/ABDKMath64x64.sol";
+import "../src/Zap.sol";
 
 import "./lib/MockUser.sol";
 import "./lib/CheatCodes.sol";
@@ -24,12 +25,12 @@ import "./lib/MockToken.sol";
 
 import "./utils/Utils.sol";
 
-contract ProtocolFeeTest is Test {
+contract ZapTest is Test {
     using SafeMath for uint256;
     CheatCodes cheats = CheatCodes(HEVM_ADDRESS);
     Utils utils;
 
-    // account order is lp provider, trader, treasury, burn address
+    // account order is lp provider, trader, treasury
     MockUser[] public accounts;
 
     MockOracleFactory oracleFactory;
@@ -44,13 +45,18 @@ contract ProtocolFeeTest is Test {
     CurveFactoryV2 curveFactory;
     AssimilatorFactory assimFactory;
 
+    // Zap contract
+    Zap public zap;
+
     function setUp() public {
 
         utils = new Utils();
         // create temp accounts
-        for(uint256 i = 0; i < 4; ++i){
+        for(uint256 i = 0; i < 3; ++i){
             accounts.push(new MockUser());
         }
+        // deploy zap contract
+        zap = new Zap();
         // deploy gold token & init 3 stable coins
         MockToken gold = new MockToken();
         tokens.push(IERC20Detailed(address(gold)));
@@ -100,16 +106,15 @@ contract ProtocolFeeTest is Test {
             curves.push(_curve);
         }
         cheats.stopPrank();
-
         // now mint gold & silver tokens
         uint256 mintAmt = 300_000_000_000;
         for(uint256 i = 0; i < 4; ++i){
             decimals.push(utils.tenToPowerOf(tokens[i].decimals()));
             if(i == 0) {
-                tokens[0].mint(address(accounts[0]), mintAmt.mul(1e18));
+                tokens[0].mint(address(accounts[0]), mintAmt.mul(decimals[i]));
             }
             else{
-                deal(address(tokens[i]), address(accounts[0]), mintAmt.mul(1e18));
+                deal(address(tokens[i]), address(accounts[0]), mintAmt.mul(decimals[i]));
             }
         }
         // now approve
@@ -117,79 +122,59 @@ contract ProtocolFeeTest is Test {
         for(uint256 i = 0; i < 3; ++i){
             tokens[i].approve(address(curves[i]), type(uint).max);
             tokens[3].approve(address(curves[i]), type(uint).max);
-            curves[i].deposit(100_000_000_000 * 1e18, block.timestamp + 60);
+        }
+        // approve for zap
+        for(uint256 i = 0; i < 4; ++i) {
+            tokens[i].approve(address(zap), type(uint256).max);
         }
         cheats.stopPrank();
     }
-    
-    function testProtocolFeeUsdcCadcSwap(uint256 mintAmount) public {
-        cheats.assume(mintAmount > 10000);
-        cheats.assume(mintAmount < 10000000);
-        
-        for(uint256 i = 0 ; i < 3; ++i){
-
-            deal(address(tokens[i]), address(accounts[1]), mintAmount * decimals[i]);
+    // // test swap of forex stable coin(euroc, cadc) usdc
+    function testZap(uint256 amt) public {
+        cheats.assume(amt > 100);
+        cheats.assume(amt < 10000000);
+        for(uint256 i = 0; i < 2; ++i){
+            // mint token to zapper
+            deal(address(tokens[i+1]), address(accounts[1]), amt * decimals[i+1]);
 
             cheats.startPrank(address(accounts[1]));
-            tokens[i].approve(address(curves[i]), type(uint256).max);
-            tokens[3].approve(address(curves[i]), type(uint256).max);
-
-            uint256 traderOriginalUsdcBal = tokens[3].balanceOf(address(accounts[1]));
-            uint256 traderOriginalTokeniBal = tokens[i].balanceOf(address(accounts[1]));
-            uint256 treasuryOriginalUsdcBal = tokens[3].balanceOf(address(accounts[2]));
-            uint256 treasuryOriginalTokeniBal = tokens[i].balanceOf(address(accounts[2]));
-
-            // now swap
-            curves[i].originSwap(
-                address(tokens[i]),
-                address(tokens[3]),
-                traderOriginalTokeniBal,
-                0,
-                block.timestamp + 60
-            );
-
-            uint256 trader1stUsdcBal = tokens[3].balanceOf(address(accounts[1]));
-            uint256 trader1stTokeniBal = tokens[i].balanceOf(address(accounts[1]));
-            uint256 treasury1stUsdcBal = tokens[3].balanceOf(address(accounts[2]));
-            uint256 treasury1stTokeniBal = tokens[i].balanceOf(address(accounts[2]));
-
-            // now swap back
-            curves[i].originSwap(
-                address(tokens[3]),
-                address(tokens[i]),
-                treasury1stUsdcBal,
-                0,
-                block.timestamp + 60
-            );
-
-            uint256 trader2ndUsdcBal = tokens[3].balanceOf(address(accounts[1]));
-            uint256 trader2ndTokeniBal = tokens[i].balanceOf(address(accounts[1]));
-            uint256 treasury2ndUsdcBal = tokens[3].balanceOf(address(accounts[2]));
-            uint256 treasury2ndTokeniBal = tokens[i].balanceOf(address(accounts[2]));
+            tokens[i+1].approve(address(curves[i+1]), type(uint).max);
+            tokens[3].approve(address(curves[i+1]), type(uint).max);
+            tokens[i+1].approve(address(zap), type(uint).max);
+            tokens[3].approve(address(zap), type(uint).max);
             cheats.stopPrank();
-            // now burn tokens from treasury
-            cheats.startPrank(address(accounts[2]));
-            tokens[i].transfer(address(accounts[3]), treasury2ndTokeniBal);
-            tokens[3].transfer(address(accounts[3]), treasury2ndUsdcBal);
+
+            // first deposit
+            cheats.startPrank(address(accounts[0]));
+            curves[i+1].deposit(1000000000 * 1e18, block.timestamp + 60);
             cheats.stopPrank();
+
             cheats.startPrank(address(accounts[1]));
-            tokens[i].transfer(address(accounts[3]), trader2ndTokeniBal);
-            tokens[3].transfer(address(accounts[3]), trader2ndUsdcBal);
+            uint256 originalBaseBal = tokens[i+1].balanceOf(address(accounts[1]));
+            zap.zapFromBase(
+                address(curves[i+1]),
+                originalBaseBal,
+                block.timestamp + 60,
+                0
+            );
+            // now try unzap
+            IERC20(address(curves[i+1])).approve(address(zap), type(uint256).max);
+            zap.upzapFromQuote(address(curves[i+1]), curves[i+1].balanceOf(address(accounts[1])), block.timestamp+60);
+            uint256 currentBaseBal = tokens[i+1].balanceOf(address(accounts[1]));
+            uint256 currentQuoteBal = tokens[3].balanceOf(address(accounts[1]));
+            int256 baseUSDPrice = oracles[i+1].latestAnswer();
+            int256 quoteUSDPrice = oracles[3].latestAnswer();
+            originalBaseBal = originalBaseBal.div(decimals[i+1]);
+            currentBaseBal = currentBaseBal.div(decimals[i+1]);
+            currentQuoteBal = currentQuoteBal.div(decimals[3]);
+            
+            uint256 originalBaseInUSD = originalBaseBal.mul(uint256(baseUSDPrice));
+            uint256 currentBaseInUSD = currentBaseBal.mul(uint256(baseUSDPrice));
+            uint256 currentQuoteInUSD = currentQuoteBal.mul(uint256(quoteUSDPrice));
+            uint256 currentTotalInUSD = currentBaseInUSD.add(currentQuoteInUSD);
+            assertApproxEqAbs(originalBaseInUSD, currentTotalInUSD, originalBaseInUSD.div(20));
+            tokens[3].transfer(address(accounts[2]), tokens[3].balanceOf(address(accounts[1])));
             cheats.stopPrank();
-
-            // assert
-            assertApproxEqAbs(
-                (trader2ndUsdcBal+treasury2ndUsdcBal).div(treasury2ndUsdcBal),
-                5000,
-                160
-            );
-            assertApproxEqAbs(
-                (trader2ndTokeniBal+treasury2ndTokeniBal).div(treasury2ndTokeniBal),
-                5000,
-                160
-            );
         }
     }
-
-    
 }

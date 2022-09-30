@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "./interfaces/ICurveFactory.sol";
+import "./interfaces/IOracle.sol";
 
 struct OriginSwapData {
     address _origin;
@@ -36,8 +37,13 @@ struct CurveInfo {
     address _quoteCurrency;
     uint256 _baseWeight;
     uint256 _quoteWeight;
-    address _baseOracle;
+    IOracle _baseOracle;
     uint256 _baseDec;
-    address _quoteOracle;
+    IOracle _quoteOracle;
     uint256 _quoteDec;
+    uint256 _alpha;
+    uint256 _beta;
+    uint256 _feeAtHalt;
+    uint256 _epsilon;
+    uint256 _lambda;
 }

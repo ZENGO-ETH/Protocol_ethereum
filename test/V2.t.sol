@@ -76,6 +76,7 @@ contract V2Test is Test {
         );
         assimFactory.setCurveFactory(address(curveFactory));
         // now deploy curves
+        cheats.startPrank(address(accounts[2]));
         for(uint256 i = 0; i < 3;++i){
             CurveInfo memory curveInfo = CurveInfo(
                 string(abi.encode("dfx-curve-",i)),
@@ -84,23 +85,22 @@ contract V2Test is Test {
                 address(tokens[3]),
                 DefaultCurve.BASE_WEIGHT,
                 DefaultCurve.QUOTE_WEIGHT,
-                address(oracles[i]),
+                oracles[i],
                 tokens[i].decimals(),
-                address(oracles[3]),
-                tokens[3].decimals()
-            );
-            Curve _curve = curveFactory.newCurve(curveInfo);
-            _curve.setParams(
+                oracles[3],
+                tokens[3].decimals(),
                 DefaultCurve.ALPHA,
                 DefaultCurve.BETA,
                 DefaultCurve.MAX,
                 DefaultCurve.EPSILON,
                 DefaultCurve.LAMBDA
             );
+            Curve _curve = curveFactory.newCurve(curveInfo);
             _curve.turnOffWhitelisting();
             curves.push(_curve);
         }
-
+        cheats.stopPrank();
+        
         // now mint gold & silver tokens
         uint256 mintAmt = 300_000_000_000;
         for(uint256 i = 0; i < 4; ++i){

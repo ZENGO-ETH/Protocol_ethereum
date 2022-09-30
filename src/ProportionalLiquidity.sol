@@ -129,34 +129,6 @@ library ProportionalLiquidity {
         return (curves_, deposits_);
     }
 
-    function emergencyProportionalWithdraw(Storage.Curve storage curve, uint256 _withdrawal)
-        external
-        returns (uint256[] memory)
-    {
-        uint256 _length = curve.assets.length;
-
-        (, int128[] memory _oBals) = getGrossLiquidityAndBalances(curve);
-
-        uint256[] memory withdrawals_ = new uint256[](_length);
-
-        int128 _totalShells = curve.totalSupply.divu(1e18);
-        int128 __withdrawal = _withdrawal.divu(1e18);
-
-        int128 _multiplier = __withdrawal.div(_totalShells);
-
-        for (uint256 i = 0; i < _length; i++) {
-            withdrawals_[i] = Assimilators.outputNumeraire(
-                curve.assets[i].addr,
-                msg.sender,
-                _oBals[i].mul(_multiplier)
-            );
-        }
-
-        burn(curve, msg.sender, _withdrawal);
-
-        return withdrawals_;
-    }
-
     function proportionalWithdraw(Storage.Curve storage curve, uint256 _withdrawal)
         external
         returns (uint256[] memory)
