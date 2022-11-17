@@ -39,9 +39,12 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
     int128 public protocolFee;
     address public protocolTreasury;
 
+    // Global curve operational state
+    bool public flashable = false;
+
+    event FlashableSet(bool isFlashable);
     event TreasuryUpdated(address indexed newTreasury);
     event ProtocolFeeUpdated(address indexed treasury, int128 indexed fee);
-
     event NewCurve(address indexed caller, bytes32 indexed id, address indexed curve);
 
     mapping(bytes32 => address) public curves;
@@ -60,12 +63,22 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
         assimilatorFactory = IAssimilatorFactory(_assimFactory);
     }
 
+    function getFlashableState() external view virtual override returns (bool) {
+        return flashable;
+    }
+
     function getProtocolFee() external view virtual override returns (int128) {
         return protocolFee;
     }
 
     function getProtocolTreasury() external view virtual override returns (address) {
         return protocolTreasury;
+    }
+
+    function setFlashable(bool _toFlashOrNotToFlash) external onlyOwner {
+        emit FlashableSet(_toFlashOrNotToFlash);
+
+        flashable = _toFlashOrNotToFlash;
     }
 
     function updateProtocolTreasury(address _newTreasury) external onlyOwner {

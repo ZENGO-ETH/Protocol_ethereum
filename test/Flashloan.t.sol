@@ -90,6 +90,11 @@ contract FlashloanTest is Test {
             address(assimilatorFactory)
         );
 
+        curveFactory.transferOwnership(address(multisig));
+
+        cheats.prank(address(multisig));
+        curveFactory.setFlashable(true);
+
         router = new Router(address(curveFactory));
         
         assimilatorFactory.setCurveFactory(address(curveFactory));
@@ -465,7 +470,7 @@ contract FlashloanTest is Test {
 
         curveFlash.initFlash(address(curve), flashData);
     }
-
+    
     function testFail_Reentrancy() public {
         IERC20Detailed token0 = cadc;
         IERC20Detailed token1 = usdc;
@@ -490,5 +495,43 @@ contract FlashloanTest is Test {
         });
 
         curveFlashReentrancy.initFlash(address(curve), flashData);
+    }
+
+    function testFail_NotOwnerSettingFlashable() public {
+        IERC20Detailed token0 = cadc;
+        IERC20Detailed token1 = usdc;
+        Curve curve = dfxCurves[0];
+
+        // Make it flashable
+        curveFactory.setFlashable(false);
+    }
+
+    function testFail_Flashable() public {
+        IERC20Detailed token0 = cadc;
+        IERC20Detailed token1 = usdc;
+        Curve curve = dfxCurves[0];
+
+        // Make it not flashable
+        cheats.prank(address(multisig));
+        curveFactory.setFlashable(false);
+
+        uint256 dec0 = utils.tenToPowerOf(token0.decimals());
+        uint256 dec1 = utils.tenToPowerOf(token1.decimals());
+
+        deal(address(token0), address(curveFlash), uint256(100_000).mul(dec0));
+        deal(address(token1), address(curveFlash), uint256(100_000).mul(dec1));
+
+        (uint256 one, uint256[] memory derivatives) = ICurve(address(curve)).viewDeposit(100_000e18);
+
+        FlashParams memory flashData = FlashParams({
+            token0: address(token0),
+            token1: address(token1),
+            amount0: derivatives[0],
+            amount1: derivatives[1],
+            decimal0: dec0,
+            decimal1: dec1
+        });
+
+        curveFlash.initFlash(address(curve), flashData);
     }
 }
