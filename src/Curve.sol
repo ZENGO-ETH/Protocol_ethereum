@@ -320,6 +320,11 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         _;
     }
 
+    modifier globallyTransactable() {
+        require(!ICurveFactory(address(curveFactory)).getGlobalFrozenState(), "Curve/frozen-globally-only-allowing-proportional-withdraw");
+        _;
+    }
+    
     modifier isFlashable() {
         require(ICurveFactory(address(curveFactory)).getFlashableState(), "Curve/flashloans-paused");
         _;
@@ -428,7 +433,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         uint256 _originAmount,
         uint256 _minTargetAmount,
         uint256 _deadline
-    ) external deadline(_deadline) transactable noDelegateCall isNotEmergency nonReentrant returns (uint256 targetAmount_) {
+    ) external deadline(_deadline) globallyTransactable transactable noDelegateCall isNotEmergency nonReentrant returns (uint256 targetAmount_) {
         OriginSwapData memory _swapData;
         _swapData._origin = _origin;
         _swapData._target = _target;
@@ -450,7 +455,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         address _origin,
         address _target,
         uint256 _originAmount
-    ) external view transactable returns (uint256 targetAmount_) {
+    ) external view globallyTransactable transactable returns (uint256 targetAmount_) {
         targetAmount_ = Swaps.viewOriginSwap(curve, _origin, _target, _originAmount);
     }
 
@@ -467,7 +472,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         uint256 _maxOriginAmount,
         uint256 _targetAmount,
         uint256 _deadline
-    ) external deadline(_deadline) transactable noDelegateCall isNotEmergency nonReentrant returns (uint256 originAmount_) {
+    ) external deadline(_deadline) globallyTransactable transactable noDelegateCall isNotEmergency nonReentrant returns (uint256 originAmount_) {
         TargetSwapData memory _swapData;
         _swapData._origin = _origin;
         _swapData._target = _target;
@@ -489,7 +494,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         address _origin,
         address _target,
         uint256 _targetAmount
-    ) external view transactable returns (uint256 originAmount_) {
+    ) external view globallyTransactable transactable returns (uint256 originAmount_) {
         originAmount_ = Swaps.viewTargetSwap(curve, _origin, _target, _targetAmount);
     }
 
@@ -509,7 +514,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         bytes32[] calldata merkleProof,
         uint256 _deposit,
         uint256 _deadline
-    ) external deadline(_deadline) transactable nonReentrant noDelegateCall inWhitelistingStage returns (uint256, uint256[] memory) {
+    ) external deadline(_deadline) globallyTransactable transactable nonReentrant noDelegateCall inWhitelistingStage returns (uint256, uint256[] memory) {
         require(amount == 1, "Curve/invalid-amount");
         require(index <= 473, "Curve/index-out-of-range" );
         require(isWhitelisted(index, account, amount, merkleProof), "Curve/not-whitelisted");
@@ -536,6 +541,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
     function deposit(uint256 _deposit, uint256 _deadline)
         external
         deadline(_deadline)
+        globallyTransactable
         transactable
         nonReentrant
         noDelegateCall
@@ -552,7 +558,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
     ///                 prevailing proportions of the numeraire assets of the pool
     /// @return (the amount of curves you receive in return for your deposit,
     ///          the amount deposited for each numeraire)
-    function viewDeposit(uint256 _deposit) external view transactable returns (uint256, uint256[] memory) {
+    function viewDeposit(uint256 _deposit) external view globallyTransactable transactable returns (uint256, uint256[] memory) {
         // curvesToMint_, depositsToMake_
         return ProportionalLiquidity.viewProportionalDeposit(curve, _deposit);
     }
@@ -596,7 +602,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
     /// @param   _curvesToBurn the full amount you want to withdraw from the pool which will be withdrawn from evenly amongst the
     ///                        numeraire assets of the pool
     /// @return the amonnts of numeraire assets withdrawn from the pool
-    function viewWithdraw(uint256 _curvesToBurn) external view transactable returns (uint256[] memory) {
+    function viewWithdraw(uint256 _curvesToBurn) external view globallyTransactable transactable returns (uint256[] memory) {
         return ProportionalLiquidity.viewProportionalWithdraw(curve, _curvesToBurn);
     }
 
@@ -641,7 +647,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         uint256 amount0,
         uint256 amount1,
         bytes calldata data
-    ) external isFlashable nonReentrant noDelegateCall transactable isNotEmergency {
+    ) external isFlashable globallyTransactable nonReentrant noDelegateCall transactable isNotEmergency {
         uint256 fee = curve.epsilon.mulu(1e18);
 
         require(IERC20(derivatives[0]).balanceOf(address(this)) > 0, 'Curve/token0-zero-liquidity-depth');

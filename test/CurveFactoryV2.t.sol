@@ -17,6 +17,7 @@ contract CurveFactoryV2Test is Test {
     CheatCodes cheats = CheatCodes(HEVM_ADDRESS);
     MockUser treasury;
     MockUser newTreasury;
+    MockUser liquidityProvider;
 
     AssimilatorFactory assimilatorFactory;
     CurveFactoryV2 curveFactory;
@@ -37,6 +38,7 @@ contract CurveFactoryV2Test is Test {
     function setUp() public {
         treasury = new MockUser();
         newTreasury = new MockUser();
+        liquidityProvider = new MockUser();
 
         assimilatorFactory = new AssimilatorFactory();
         curveFactory = new CurveFactoryV2(
@@ -135,5 +137,40 @@ contract CurveFactoryV2Test is Test {
         assertEq(address(treasury), curveFactory.getProtocolTreasury());
         curveFactory.updateProtocolTreasury(address(newTreasury));
         assertEq(address(newTreasury), curveFactory.getProtocolTreasury());
+    }
+
+    // Global Transactable State Frozen
+    function testFail_OwnerSetGlobalFrozen() public {
+        cheats.prank(address(liquidityProvider));
+        ICurveFactory(address(curveFactory)).setGlobalFrozen(true);
+    }
+
+    function testFail_GlobalFrozenDeposit() public {
+        ICurveFactory(address(curveFactory)).setGlobalFrozen(true);
+        
+        cheats.prank(address(liquidityProvider));
+        dfxCadcCurve.deposit(100_000, block.timestamp + 60);
+    }
+
+    function test_GlobalFrozeWithdraw() public {
+        deal(address(cadc), address(liquidityProvider), 100_000e18);
+        deal(address(usdc), address(liquidityProvider), 100_000e6);
+
+        cheats.startPrank(address(liquidityProvider));
+        cadc.approve(address(dfxCadcCurve), type(uint).max);
+        usdc.approve(address(dfxCadcCurve), type(uint).max);
+
+        dfxCadcCurve.deposit(100_000e18, block.timestamp + 60);
+        (uint256 one, uint256[] memory derivatives) = dfxCadcCurve.viewDeposit(100_000e18);
+        cheats.stopPrank();
+
+        assertEq(dfxCadcCurve.balanceOf(address(liquidityProvider)), 100_000e18);
+
+        cheats.prank(address(this));
+        ICurveFactory(address(curveFactory)).setGlobalFrozen(true);
+        
+        // can still withdraw after global freeze
+        cheats.prank(address(liquidityProvider));
+        dfxCadcCurve.withdraw(100_000e18, block.timestamp + 60);
     }
 }

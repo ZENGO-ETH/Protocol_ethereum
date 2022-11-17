@@ -531,7 +531,34 @@ contract FlashloanTest is Test {
             decimal0: dec0,
             decimal1: dec1
         });
+        
+        curveFlash.initFlash(address(curve), flashData);
+    }
+    
+    // Global Transactable State Frozen
+    function testFail_GlobalFrozenFlashloans() public {
+        IERC20Detailed token0 = cadc;
+        IERC20Detailed token1 = usdc;
+        Curve curve = dfxCurves[0];
 
+        uint256 dec0 = utils.tenToPowerOf(token0.decimals());
+        uint256 dec1 = utils.tenToPowerOf(token1.decimals());
+
+        deal(address(token0), address(curveFlash), uint256(100_000).mul(dec0));
+        deal(address(token1), address(curveFlash), uint256(100_000).mul(dec1));
+
+        (uint256 one, uint256[] memory derivatives) = ICurve(address(curve)).viewDeposit(100_000e18);
+
+        FlashParams memory flashData = FlashParams({
+            token0: address(token0),
+            token1: address(token1),
+            amount0: derivatives[0],
+            amount1: derivatives[1],
+            decimal0: dec0,
+            decimal1: dec1
+        });
+
+        ICurveFactory(address(curveFactory)).setGlobalFrozen(true);
         curveFlash.initFlash(address(curve), flashData);
     }
 }

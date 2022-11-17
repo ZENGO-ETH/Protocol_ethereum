@@ -316,4 +316,18 @@ contract RouterTest is Test {
 
         routerOriginSwapAndCheck(xsgd, cadc, xsgdOracle, cadcOracle, _amount);
     }
+
+
+    // Global Transactable State Frozen
+    function testFail_GlobalFrozenOriginSwap() public {
+        // Cannot make swaps because global state is frozen
+        ICurveFactory(address(curveFactory)).setGlobalFrozen(true);
+        routerOriginSwapAndCheck(cadc, euroc, cadcOracle, eurocOracle, 100_000);
+    }
+
+     function testFail_GlobalFrozenTargetSwap() public {
+        // Cannot make swaps because global state is frozen
+        ICurveFactory(address(curveFactory)).setGlobalFrozen(true);
+        routerViewTargetSwapAndCheck(euroc, xsgd, usdcOracle, cadcOracle, 100_000);
+    }
 }
