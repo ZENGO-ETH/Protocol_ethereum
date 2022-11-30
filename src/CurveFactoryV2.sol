@@ -42,12 +42,22 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
     // Global curve operational state
     bool public globalFrozen = false;
     bool public flashable = false;
+
+    bool public globalGuarded = false;
+    mapping (address => bool) public poolGuarded;
+
+    uint256 public globalGaurdAmt;
+    mapping (address => uint256) public poolGuardAmt;
     
     event GlobalFrozenSet(bool isFrozen);
     event FlashableSet(bool isFlashable);
     event TreasuryUpdated(address indexed newTreasury);
     event ProtocolFeeUpdated(address indexed treasury, int128 indexed fee);
     event NewCurve(address indexed caller, bytes32 indexed id, address indexed curve);
+    event GlobalGuardSet(bool isGuarded);
+    event GlobalGuardAmountSet (uint256 amount);
+    event PoolGuardSet (address indexed pool, bool isGuarded);
+    event PoolGuardAmountSet (address indexed pool, uint256 guardAmount);
 
     mapping(bytes32 => address) public curves;
 
@@ -85,6 +95,44 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
         emit GlobalFrozenSet(_toFreezeOrNotToFreeze);
 
         globalFrozen = _toFreezeOrNotToFreeze;
+    }
+
+    function toggleGlobalGuarded () external onlyOwner {
+        globalGuarded = !globalGuarded;
+        emit GlobalGuardSet(globalGuarded);
+    }
+
+    function setPoolGuarded (address pool, bool guarded ) external onlyOwner {
+        poolGuarded[pool] = guarded;
+        emit PoolGuardSet(pool, guarded);
+    }
+
+    function setGlobalGuardAmount (uint256 amount) external onlyOwner {
+        globalGaurdAmt = amount;
+        emit GlobalGuardAmountSet (globalGaurdAmt);
+    }
+
+    function setPoolGuardAmount (address pool, uint256 amount) external onlyOwner {
+        poolGuardAmt[pool] = amount;
+        emit PoolGuardAmountSet(pool, amount);
+    }
+
+    function isPoolGuarded (address pool) external view override returns (bool) {
+        bool _poolGuarded = poolGuarded[pool];
+        if(!_poolGuarded){
+            return globalGuarded;
+        }else{
+            return true;
+        }
+    }
+
+    function getPoolGuardAmount (address pool) external view override returns (uint256) {
+        uint256 _poolGuardAmt = poolGuardAmt[pool];
+        if(_poolGuardAmt == 0) {
+            return globalGaurdAmt;
+        }else{
+            return _poolGuardAmt;
+        }
     }
     
     function setFlashable(bool _toFlashOrNotToFlash) external onlyOwner {

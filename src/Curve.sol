@@ -330,6 +330,17 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         _;
     }
 
+    modifier isDepositable (address pool, uint256 deposits) {
+        if(!ICurveFactory(curveFactory).isPoolGuarded(pool)){
+            _;
+        }else{
+            uint256 poolGuardAmt = ICurveFactory(curveFactory).getPoolGuardAmount(pool);
+        uint256 userLptBal = curve.totalMinted[msg.sender];
+        require(userLptBal.add(deposits) <= poolGuardAmt, "curve/can't deposit too much");
+        _;
+        }
+    }
+
     constructor(
         string memory _name,
         string memory _symbol,
@@ -514,7 +525,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         bytes32[] calldata merkleProof,
         uint256 _deposit,
         uint256 _deadline
-    ) external deadline(_deadline) globallyTransactable transactable nonReentrant noDelegateCall inWhitelistingStage returns (uint256, uint256[] memory) {
+    ) external deadline(_deadline) globallyTransactable transactable nonReentrant noDelegateCall inWhitelistingStage isDepositable(address(this), _deposit) returns (uint256, uint256[] memory) {
         require(amount == 1, "Curve/invalid-amount");
         require(index <= 473, "Curve/index-out-of-range" );
         require(isWhitelisted(index, account, amount, merkleProof), "Curve/not-whitelisted");
@@ -529,15 +540,15 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         if (whitelistedDeposited[msg.sender] > 10000e18) {
             revert("Curve/exceed-whitelist-maximum-deposit");
         }
-
+        increaseTotalMint(msg.sender, curvesMinted_);
         return (curvesMinted_, deposits_);
     }
 
     /// @notice deposit into the pool with no slippage from the numeraire assets the pool supports
     /// @param  _deposit the full amount you want to deposit into the pool which will be divided up evenly amongst
     ///                  the numeraire assets of the pool
-    /// @return (the amount of curves you receive in return for your deposit,
-    ///          the amount deposited for each numeraire)
+    /// @return ( the amount of curves you receive in return for your deposit,
+    ///           the amount deposited for each numeraire)
     function deposit(uint256 _deposit, uint256 _deadline)
         external
         deadline(_deadline)
@@ -547,10 +558,14 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         noDelegateCall
         notInWhitelistingStage
         isNotEmergency
+        isDepositable(address(this), _deposit)
         returns (uint256, uint256[] memory)
     {
         // (curvesMinted_,  deposits_)
-        return ProportionalLiquidity.proportionalDeposit(curve, _deposit);
+        ( uint256 curvesMinted_, uint256[] memory deposits_) =
+          ProportionalLiquidity.proportionalDeposit(curve, _deposit);
+        increaseTotalMint(msg.sender, curvesMinted_);
+        return (curvesMinted_, deposits_);
     }
 
     /// @notice view deposits and curves minted a given deposit would return
@@ -561,6 +576,11 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
     function viewDeposit(uint256 _deposit) external view globallyTransactable transactable returns (uint256, uint256[] memory) {
         // curvesToMint_, depositsToMake_
         return ProportionalLiquidity.viewProportionalDeposit(curve, _deposit);
+    }
+
+    function increaseTotalMint (address minter, uint256 amount) internal {
+        uint256 original = curve.totalMinted[minter];
+        curve.totalMinted[minter] = original.add(amount);
     }
 
     /// @notice  Emergency withdraw tokens in the event that the oracle somehow bugs out
@@ -576,6 +596,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         noDelegateCall
         returns (uint256[] memory withdrawals_)
     {
+        decreaseTotalMint(msg.sender, _curvesToBurn);
         return ProportionalLiquidity.proportionalWithdraw(curve, _curvesToBurn);
     }
 
@@ -595,6 +616,7 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
             whitelistedDeposited[msg.sender] = whitelistedDeposited[msg.sender].sub(_curvesToBurn);
         }
 
+        decreaseTotalMint(msg.sender, _curvesToBurn);
         return ProportionalLiquidity.proportionalWithdraw(curve, _curvesToBurn);
     }
 
@@ -604,6 +626,11 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
     /// @return the amonnts of numeraire assets withdrawn from the pool
     function viewWithdraw(uint256 _curvesToBurn) external view globallyTransactable transactable returns (uint256[] memory) {
         return ProportionalLiquidity.viewProportionalWithdraw(curve, _curvesToBurn);
+    }
+
+    function decreaseTotalMint (address burner, uint256 amount) internal {
+        uint256 original = curve.totalMinted[burner];
+        curve.totalMinted[burner] = original.sub(amount);
     }
 
     function supportsInterface(bytes4 _interface) public pure returns (bool supports_) {
