@@ -117,33 +117,6 @@ contract CurveFactoryV2Test is Test {
         fail("CurveFactory/currency-pair-already-exists");
     }
 
-    // function testNewPairs() public {
-    //     CurveInfo memory curveInfo = CurveInfo(
-    //         string.concat("dfx-", euroc.name()),
-    //         string.concat("dfx-", euroc.symbol()),
-    //         address(euroc),
-    //         address(usdc),
-    //         DefaultCurve.BASE_WEIGHT,
-    //         DefaultCurve.QUOTE_WEIGHT,
-    //         eurocOracle,
-    //         euroc.decimals(),
-    //         usdcOracle,
-    //         usdc.decimals(),
-    //         DefaultCurve.ALPHA,
-    //         DefaultCurve.BETA,
-    //         DefaultCurve.MAX,
-    //         DefaultCurve.EPSILON,
-    //         DefaultCurve.LAMBDA
-    //     );
-    //     dfxEurocCurve = curveFactory.newCurve(curveInfo);
-
-    //     address curve0 = curveFactory.getCurve(Mainnet.CADC, Mainnet.USDC);
-    //     address curve1 = curveFactory.getCurve(Mainnet.EUROC, Mainnet.USDC);
-
-    //     assertEq(curve0, address(dfxCadcCurve));
-    //     assertEq(curve1, address(dfxEurocCurve));
-    // }
-
     function testUpdateFee() public {
         int128 newFee = 100_000;
         curveFactory.updateProtocolFee(newFee);
