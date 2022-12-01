@@ -331,6 +331,9 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
     }
 
     modifier isDepositable (address pool, uint256 deposits) {
+        uint256 poolCap = ICurveFactory(curveFactory).getPoolCap(pool);
+        uint256 supply = totalSupply();
+        require( poolCap == 0 || supply.add(deposits) <= poolCap, "curve/exceeds pool cap" );
         if(!ICurveFactory(curveFactory).isPoolGuarded(pool)){
             _;
         }else{

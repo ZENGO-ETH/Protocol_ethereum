@@ -9,4 +9,5 @@ interface ICurveFactory {
     function getFlashableState() external view returns (bool);
     function isPoolGuarded(address pool) external view returns (bool);
     function getPoolGuardAmount(address pool) external view returns (uint256);
+    function getPoolCap(address pool) external view returns (uint256);
 }

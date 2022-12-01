@@ -48,6 +48,7 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
 
     uint256 public globalGaurdAmt;
     mapping (address => uint256) public poolGuardAmt;
+    mapping (address => uint256) public poolCapAmt;
     
     event GlobalFrozenSet(bool isFrozen);
     event FlashableSet(bool isFlashable);
@@ -58,6 +59,7 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
     event GlobalGuardAmountSet (uint256 amount);
     event PoolGuardSet (address indexed pool, bool isGuarded);
     event PoolGuardAmountSet (address indexed pool, uint256 guardAmount);
+    event PoolCapSet (address indexed pool, uint256 cap);
 
     mapping(bytes32 => address) public curves;
 
@@ -112,6 +114,11 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
         emit GlobalGuardAmountSet (globalGaurdAmt);
     }
 
+    function setPoolCap (address pool, uint256 cap) external onlyOwner {
+        poolCapAmt[pool] = cap;
+        emit PoolCapSet(pool, cap);
+    }
+
     function setPoolGuardAmount (address pool, uint256 amount) external onlyOwner {
         poolGuardAmt[pool] = amount;
         emit PoolGuardAmountSet(pool, amount);
@@ -133,6 +140,10 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
         }else{
             return _poolGuardAmt;
         }
+    }
+
+    function getPoolCap (address pool) external view override returns (uint256) {
+        return poolCapAmt[pool];
     }
     
     function setFlashable(bool _toFlashOrNotToFlash) external onlyOwner {
