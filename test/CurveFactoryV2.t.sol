@@ -224,4 +224,38 @@ contract CurveFactoryV2Test is Test {
         dfxEurocCurve.deposit(80_000e18, block.timestamp + 60);
         cheats.stopPrank();
     }
+
+    function test_depositPoolCap() public {
+        
+        // set pool cap to 100k
+        curveFactory.setPoolCap(address(dfxEurocCurve), 100_000e18);
+
+
+        deal(address(euroc), address(liquidityProvider), 200_000e6);
+        deal(address(usdc), address(liquidityProvider), 200_000e6);
+
+        cheats.startPrank(address(liquidityProvider));
+        euroc.approve(address(dfxEurocCurve), type(uint).max);
+        usdc.approve(address(dfxEurocCurve), type(uint).max);
+
+        dfxEurocCurve.deposit(100_000e18, block.timestamp + 60);
+        cheats.stopPrank();
+    }
+
+    function testFail_depositPoolCap() public {
+        
+        // set pool cap to 100k
+        curveFactory.setPoolCap(address(dfxEurocCurve), 100_000e18);
+
+
+        deal(address(euroc), address(liquidityProvider), 200_000e6);
+        deal(address(usdc), address(liquidityProvider), 200_000e6);
+
+        cheats.startPrank(address(liquidityProvider));
+        euroc.approve(address(dfxEurocCurve), type(uint).max);
+        usdc.approve(address(dfxEurocCurve), type(uint).max);
+
+        dfxEurocCurve.deposit(101_000e18, block.timestamp + 60);
+        cheats.stopPrank();
+    }
 }
