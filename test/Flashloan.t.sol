@@ -120,7 +120,6 @@ contract FlashloanTest is Test {
             );
 
             dfxCurves[i] = curveFactory.newCurve(curveInfo);
-            dfxCurves[i].turnOffWhitelisting();
         }
         cheats.stopPrank();
 

@@ -102,7 +102,6 @@ contract ZapTest is Test {
                 DefaultCurve.LAMBDA
             );
             Curve _curve = curveFactory.newCurve(curveInfo);
-            _curve.turnOffWhitelisting();
             curves.push(_curve);
         }
         cheats.stopPrank();
