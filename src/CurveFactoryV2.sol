@@ -156,6 +156,7 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
             _info._epsilon,
             _info._lambda
         );
+        curve.turnOffWhitelisting();
         curve.transferOwnership(protocolTreasury);
         curves[curveId] = address(curve);
 
