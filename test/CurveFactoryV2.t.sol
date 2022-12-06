@@ -208,10 +208,8 @@ contract CurveFactoryV2Test is Test {
     }
 
     function test_depositPoolGuard(uint256 _extraAmt) public {
-        console.logString("testFail depositPoolGuard called");
         cheats.assume(_extraAmt > 1);
         cheats.assume(_extraAmt < 20_000e18);
-        // uint256 _depositAmt = 99_999e18;
         // enable global guard
         curveFactory.toggleGlobalGuarded();
         // set global guard amount to 100k
@@ -226,16 +224,14 @@ contract CurveFactoryV2Test is Test {
         cheats.startPrank(address(liquidityProvider));
         euroc.approve(address(dfxEurocCurve), type(uint).max);
         usdc.approve(address(dfxEurocCurve), type(uint).max);
-
+        // deposit less than 80k
         dfxEurocCurve.deposit(80_000e18 - _extraAmt, block.timestamp + 60);
         cheats.stopPrank();
     }
 
     function testFail_depositPoolGuard(uint256 _extraAmt) public {
-        console.logString("testFail depositPoolGuard called");
         cheats.assume(_extraAmt > 1);
         cheats.assume(_extraAmt < 20_000e18);
-        // uint256 _depositAmt = 99_999e18;
         // enable global guard
         curveFactory.toggleGlobalGuarded();
         // set global guard amount to 100k
@@ -250,7 +246,7 @@ contract CurveFactoryV2Test is Test {
         cheats.startPrank(address(liquidityProvider));
         euroc.approve(address(dfxEurocCurve), type(uint).max);
         usdc.approve(address(dfxEurocCurve), type(uint).max);
-
+        // deposit more than 80k
         dfxEurocCurve.deposit(80_000e18 + _extraAmt, block.timestamp + 60);
         cheats.stopPrank();
     }
