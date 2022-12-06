@@ -73,8 +73,8 @@ contract CurveFactoryV2Test is Test {
         dfxCadcCurve.turnOffWhitelisting();
         // Euroc Curve
         CurveInfo memory eurocCurveInfo = CurveInfo(
-            string.concat("dfx-", cadc.name()),
-            string.concat("dfx-", cadc.symbol()),
+            string.concat("dfx-", euroc.name()),
+            string.concat("dfx-", euroc.symbol()),
             address(euroc),
             address(usdc),
             DefaultCurve.BASE_WEIGHT,
@@ -169,7 +169,28 @@ contract CurveFactoryV2Test is Test {
         dfxCadcCurve.withdraw(100_000e18, block.timestamp + 60);
     }
 
-    function test_depositGlobalGuard() public {
+    function test_depositGlobalGuard(uint256 _gGuardAmt) public {
+        cheats.assume(_gGuardAmt > 10_000e18);
+        cheats.assume(_gGuardAmt < 100_000_000e18);
+        // enable global guard
+        curveFactory.toggleGlobalGuarded();
+        // set global guard amount to 100k
+        curveFactory.setGlobalGuardAmount(_gGuardAmt);
+
+        deal(address(cadc), address(liquidityProvider), _gGuardAmt * 2);
+        deal(address(usdc), address(liquidityProvider), _gGuardAmt / 1e12);
+
+        cheats.startPrank(address(liquidityProvider));
+        cadc.approve(address(dfxCadcCurve), type(uint).max);
+        usdc.approve(address(dfxCadcCurve), type(uint).max);
+
+        dfxCadcCurve.deposit(_gGuardAmt, block.timestamp + 60);
+        cheats.stopPrank();
+    }
+
+    function testFail_depositGlobalGuard(uint256 _extraAmt) public {
+        cheats.assume(_extraAmt > 1);
+        cheats.assume(_extraAmt < 100_100e18);
         // enable global guard
         curveFactory.toggleGlobalGuarded();
         // set global guard amount to 100k
@@ -182,30 +203,15 @@ contract CurveFactoryV2Test is Test {
         cadc.approve(address(dfxCadcCurve), type(uint).max);
         usdc.approve(address(dfxCadcCurve), type(uint).max);
 
-        dfxCadcCurve.deposit(100_000e18, block.timestamp + 60);
+        dfxCadcCurve.deposit(100_000e18 + _extraAmt, block.timestamp + 60);
         cheats.stopPrank();
     }
 
-    function testFail_depositGlobalGuard() public {
-
-        // enable global guard
-        curveFactory.toggleGlobalGuarded();
-        // set global guard amount to 100k
-        curveFactory.setGlobalGuardAmount(100_000e18);
-
-        deal(address(cadc), address(liquidityProvider), 200_000e18);
-        deal(address(usdc), address(liquidityProvider), 200_000e6);
-
-        cheats.startPrank(address(liquidityProvider));
-        cadc.approve(address(dfxCadcCurve), type(uint).max);
-        usdc.approve(address(dfxCadcCurve), type(uint).max);
-
-        dfxCadcCurve.deposit(110_000e18, block.timestamp + 60);
-        cheats.stopPrank();
-    }
-
-    function test_depositPoolGuard() public {
-        
+    function test_depositPoolGuard(uint256 _extraAmt) public {
+        console.logString("testFail depositPoolGuard called");
+        cheats.assume(_extraAmt > 1);
+        cheats.assume(_extraAmt < 20_000e18);
+        // uint256 _depositAmt = 99_999e18;
         // enable global guard
         curveFactory.toggleGlobalGuarded();
         // set global guard amount to 100k
@@ -214,14 +220,38 @@ contract CurveFactoryV2Test is Test {
         curveFactory.setPoolGuarded( address(dfxEurocCurve), true );
         curveFactory.setPoolGuardAmount(address(dfxEurocCurve), 80_000e18);
 
-        deal(address(euroc), address(liquidityProvider), 200_000e6);
-        deal(address(usdc), address(liquidityProvider), 200_000e6);
+        deal(address(euroc), address(liquidityProvider), 300_000e6);
+        deal(address(usdc), address(liquidityProvider), 300_000e6);
 
         cheats.startPrank(address(liquidityProvider));
         euroc.approve(address(dfxEurocCurve), type(uint).max);
         usdc.approve(address(dfxEurocCurve), type(uint).max);
 
-        dfxEurocCurve.deposit(80_000e18, block.timestamp + 60);
+        dfxEurocCurve.deposit(80_000e18 - _extraAmt, block.timestamp + 60);
+        cheats.stopPrank();
+    }
+
+    function testFail_depositPoolGuard(uint256 _extraAmt) public {
+        console.logString("testFail depositPoolGuard called");
+        cheats.assume(_extraAmt > 1);
+        cheats.assume(_extraAmt < 20_000e18);
+        // uint256 _depositAmt = 99_999e18;
+        // enable global guard
+        curveFactory.toggleGlobalGuarded();
+        // set global guard amount to 100k
+        curveFactory.setGlobalGuardAmount(100_000e18);
+        // while global guard amt is 100k, Euroc pool guard amt is 80k
+        curveFactory.setPoolGuarded( address(dfxEurocCurve), true );
+        curveFactory.setPoolGuardAmount(address(dfxEurocCurve), 80_000e18);
+
+        deal(address(euroc), address(liquidityProvider), 300_000e6);
+        deal(address(usdc), address(liquidityProvider), 300_000e6);
+
+        cheats.startPrank(address(liquidityProvider));
+        euroc.approve(address(dfxEurocCurve), type(uint).max);
+        usdc.approve(address(dfxEurocCurve), type(uint).max);
+
+        dfxEurocCurve.deposit(80_000e18 + _extraAmt, block.timestamp + 60);
         cheats.stopPrank();
     }
 
@@ -229,7 +259,6 @@ contract CurveFactoryV2Test is Test {
         
         // set pool cap to 100k
         curveFactory.setPoolCap(address(dfxEurocCurve), 100_000e18);
-
 
         deal(address(euroc), address(liquidityProvider), 200_000e6);
         deal(address(usdc), address(liquidityProvider), 200_000e6);
@@ -242,11 +271,11 @@ contract CurveFactoryV2Test is Test {
         cheats.stopPrank();
     }
 
-    function testFail_depositPoolCap() public {
-        
+    function testFail_depositPoolCap(uint256 _extraAmt) public {
+        cheats.assume(_extraAmt > 1);
+        cheats.assume(_extraAmt < 10_000e18);
         // set pool cap to 100k
         curveFactory.setPoolCap(address(dfxEurocCurve), 100_000e18);
-
 
         deal(address(euroc), address(liquidityProvider), 200_000e6);
         deal(address(usdc), address(liquidityProvider), 200_000e6);
@@ -255,7 +284,7 @@ contract CurveFactoryV2Test is Test {
         euroc.approve(address(dfxEurocCurve), type(uint).max);
         usdc.approve(address(dfxEurocCurve), type(uint).max);
 
-        dfxEurocCurve.deposit(101_000e18, block.timestamp + 60);
+        dfxEurocCurve.deposit(100_000e18 + _extraAmt, block.timestamp + 60);
         cheats.stopPrank();
     }
 }

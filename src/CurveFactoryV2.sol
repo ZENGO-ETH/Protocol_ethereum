@@ -46,7 +46,7 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
     bool public globalGuarded = false;
     mapping (address => bool) public poolGuarded;
 
-    uint256 public globalGaurdAmt;
+    uint256 public globalGuardAmt;
     mapping (address => uint256) public poolGuardAmt;
     mapping (address => uint256) public poolCapAmt;
     
@@ -110,8 +110,8 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
     }
 
     function setGlobalGuardAmount (uint256 amount) external onlyOwner {
-        globalGaurdAmt = amount;
-        emit GlobalGuardAmountSet (globalGaurdAmt);
+        globalGuardAmt = amount;
+        emit GlobalGuardAmountSet (globalGuardAmt);
     }
 
     function setPoolCap (address pool, uint256 cap) external onlyOwner {
@@ -136,7 +136,7 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
     function getPoolGuardAmount (address pool) external view override returns (uint256) {
         uint256 _poolGuardAmt = poolGuardAmt[pool];
         if(_poolGuardAmt == 0) {
-            return globalGaurdAmt;
+            return globalGuardAmt;
         }else{
             return _poolGuardAmt;
         }
