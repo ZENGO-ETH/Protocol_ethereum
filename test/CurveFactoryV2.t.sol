@@ -50,7 +50,8 @@ contract CurveFactoryV2Test is Test {
         assimilatorFactory.setCurveFactory(address(curveFactory));
 
         cheats.startPrank(address(treasury));
-        CurveInfo memory curveInfo = CurveInfo(
+        // Cadc Curve
+        CurveInfo memory cadcCurveInfo = CurveInfo(
             string.concat("dfx-", cadc.name()),
             string.concat("dfx-", cadc.symbol()),
             address(cadc),
@@ -68,7 +69,29 @@ contract CurveFactoryV2Test is Test {
             DefaultCurve.LAMBDA
         );
 
-        dfxCadcCurve = curveFactory.newCurve(curveInfo);
+        dfxCadcCurve = curveFactory.newCurve(cadcCurveInfo);
+        dfxCadcCurve.turnOffWhitelisting();
+        // Euroc Curve
+        CurveInfo memory eurocCurveInfo = CurveInfo(
+            string.concat("dfx-", euroc.name()),
+            string.concat("dfx-", euroc.symbol()),
+            address(euroc),
+            address(usdc),
+            DefaultCurve.BASE_WEIGHT,
+            DefaultCurve.QUOTE_WEIGHT,
+            eurocOracle,
+            euroc.decimals(),
+            usdcOracle,
+            usdc.decimals(),
+            DefaultCurve.ALPHA,
+            DefaultCurve.BETA,
+            DefaultCurve.MAX,
+            DefaultCurve.EPSILON,
+            DefaultCurve.LAMBDA
+        );
+
+        dfxEurocCurve = curveFactory.newCurve(eurocCurveInfo);
+        dfxEurocCurve.turnOffWhitelisting();
         cheats.stopPrank();
     }
 
@@ -92,33 +115,6 @@ contract CurveFactoryV2Test is Test {
         );
         dfxCadcCurve = curveFactory.newCurve(curveInfo);
         fail("CurveFactory/currency-pair-already-exists");
-    }
-
-    function testNewPairs() public {
-        CurveInfo memory curveInfo = CurveInfo(
-            string.concat("dfx-", euroc.name()),
-            string.concat("dfx-", euroc.symbol()),
-            address(euroc),
-            address(usdc),
-            DefaultCurve.BASE_WEIGHT,
-            DefaultCurve.QUOTE_WEIGHT,
-            eurocOracle,
-            euroc.decimals(),
-            usdcOracle,
-            usdc.decimals(),
-            DefaultCurve.ALPHA,
-            DefaultCurve.BETA,
-            DefaultCurve.MAX,
-            DefaultCurve.EPSILON,
-            DefaultCurve.LAMBDA
-        );
-        dfxEurocCurve = curveFactory.newCurve(curveInfo);
-
-        address curve0 = curveFactory.getCurve(Mainnet.CADC, Mainnet.USDC);
-        address curve1 = curveFactory.getCurve(Mainnet.EUROC, Mainnet.USDC);
-
-        assertEq(curve0, address(dfxCadcCurve));
-        assertEq(curve1, address(dfxEurocCurve));
     }
 
     function testUpdateFee() public {
@@ -171,5 +167,120 @@ contract CurveFactoryV2Test is Test {
         // can still withdraw after global freeze
         cheats.prank(address(liquidityProvider));
         dfxCadcCurve.withdraw(100_000e18, block.timestamp + 60);
+    }
+
+    function test_depositGlobalGuard(uint256 _gGuardAmt) public {
+        cheats.assume(_gGuardAmt > 10_000e18);
+        cheats.assume(_gGuardAmt < 100_000_000e18);
+        // enable global guard
+        curveFactory.toggleGlobalGuarded();
+        // set global guard amount to 100k
+        curveFactory.setGlobalGuardAmount(_gGuardAmt);
+
+        deal(address(cadc), address(liquidityProvider), _gGuardAmt * 2);
+        deal(address(usdc), address(liquidityProvider), _gGuardAmt / 1e12);
+
+        cheats.startPrank(address(liquidityProvider));
+        cadc.approve(address(dfxCadcCurve), type(uint).max);
+        usdc.approve(address(dfxCadcCurve), type(uint).max);
+
+        dfxCadcCurve.deposit(_gGuardAmt, block.timestamp + 60);
+        cheats.stopPrank();
+    }
+
+    function testFail_depositGlobalGuard(uint256 _extraAmt) public {
+        cheats.assume(_extraAmt > 1);
+        cheats.assume(_extraAmt < 100_100e18);
+        // enable global guard
+        curveFactory.toggleGlobalGuarded();
+        // set global guard amount to 100k
+        curveFactory.setGlobalGuardAmount(100_000e18);
+
+        deal(address(cadc), address(liquidityProvider), 200_000e18);
+        deal(address(usdc), address(liquidityProvider), 200_000e6);
+
+        cheats.startPrank(address(liquidityProvider));
+        cadc.approve(address(dfxCadcCurve), type(uint).max);
+        usdc.approve(address(dfxCadcCurve), type(uint).max);
+
+        dfxCadcCurve.deposit(100_000e18 + _extraAmt, block.timestamp + 60);
+        cheats.stopPrank();
+    }
+
+    function test_depositPoolGuard(uint256 _extraAmt) public {
+        cheats.assume(_extraAmt > 1);
+        cheats.assume(_extraAmt < 20_000e18);
+        // enable global guard
+        curveFactory.toggleGlobalGuarded();
+        // set global guard amount to 100k
+        curveFactory.setGlobalGuardAmount(100_000e18);
+        // while global guard amt is 100k, Euroc pool guard amt is 80k
+        curveFactory.setPoolGuarded( address(dfxEurocCurve), true );
+        curveFactory.setPoolGuardAmount(address(dfxEurocCurve), 80_000e18);
+
+        deal(address(euroc), address(liquidityProvider), 300_000e6);
+        deal(address(usdc), address(liquidityProvider), 300_000e6);
+
+        cheats.startPrank(address(liquidityProvider));
+        euroc.approve(address(dfxEurocCurve), type(uint).max);
+        usdc.approve(address(dfxEurocCurve), type(uint).max);
+        // deposit less than 80k
+        dfxEurocCurve.deposit(80_000e18 - _extraAmt, block.timestamp + 60);
+        cheats.stopPrank();
+    }
+
+    function testFail_depositPoolGuard(uint256 _extraAmt) public {
+        cheats.assume(_extraAmt > 1);
+        cheats.assume(_extraAmt < 20_000e18);
+        // enable global guard
+        curveFactory.toggleGlobalGuarded();
+        // set global guard amount to 100k
+        curveFactory.setGlobalGuardAmount(100_000e18);
+        // while global guard amt is 100k, Euroc pool guard amt is 80k
+        curveFactory.setPoolGuarded( address(dfxEurocCurve), true );
+        curveFactory.setPoolGuardAmount(address(dfxEurocCurve), 80_000e18);
+
+        deal(address(euroc), address(liquidityProvider), 300_000e6);
+        deal(address(usdc), address(liquidityProvider), 300_000e6);
+
+        cheats.startPrank(address(liquidityProvider));
+        euroc.approve(address(dfxEurocCurve), type(uint).max);
+        usdc.approve(address(dfxEurocCurve), type(uint).max);
+        // deposit more than 80k
+        dfxEurocCurve.deposit(80_000e18 + _extraAmt, block.timestamp + 60);
+        cheats.stopPrank();
+    }
+
+    function test_depositPoolCap() public {
+        
+        // set pool cap to 100k
+        curveFactory.setPoolCap(address(dfxEurocCurve), 100_000e18);
+
+        deal(address(euroc), address(liquidityProvider), 200_000e6);
+        deal(address(usdc), address(liquidityProvider), 200_000e6);
+
+        cheats.startPrank(address(liquidityProvider));
+        euroc.approve(address(dfxEurocCurve), type(uint).max);
+        usdc.approve(address(dfxEurocCurve), type(uint).max);
+
+        dfxEurocCurve.deposit(100_000e18, block.timestamp + 60);
+        cheats.stopPrank();
+    }
+
+    function testFail_depositPoolCap(uint256 _extraAmt) public {
+        cheats.assume(_extraAmt > 1);
+        cheats.assume(_extraAmt < 10_000e18);
+        // set pool cap to 100k
+        curveFactory.setPoolCap(address(dfxEurocCurve), 100_000e18);
+
+        deal(address(euroc), address(liquidityProvider), 200_000e6);
+        deal(address(usdc), address(liquidityProvider), 200_000e6);
+
+        cheats.startPrank(address(liquidityProvider));
+        euroc.approve(address(dfxEurocCurve), type(uint).max);
+        usdc.approve(address(dfxEurocCurve), type(uint).max);
+
+        dfxEurocCurve.deposit(100_000e18 + _extraAmt, block.timestamp + 60);
+        cheats.stopPrank();
     }
 }
