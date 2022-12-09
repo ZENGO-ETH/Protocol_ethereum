@@ -68,12 +68,12 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
         address _treasury,
         address _assimFactory
     ) {
-        require(totoalFeePercentage >= _protocolFee, "CurveFactory/protocol-fee-cannot-be-over-100-percent");
-        require(_treasury != address(0), "CurveFactory/zero-treasury-address");
+        require(totoalFeePercentage >= _protocolFee, "CurveFactory/fee-cant-be-over-100%");
+        require(_treasury != address(0), "CurveFactory/zero-address");
         protocolFee = _protocolFee;
         protocolTreasury = _treasury;
 
-        require(_assimFactory.isContract(), "CurveFactory/invalid-assimilatorFactory");
+        require(_assimFactory.isContract(), "CurveFactory/invalid-assimFactory");
         assimilatorFactory = IAssimilatorFactory(_assimFactory);
     }
 
@@ -154,13 +154,13 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
 
     function updateProtocolTreasury(address _newTreasury) external onlyOwner {
         require(_newTreasury != protocolTreasury, "CurveFactory/same-treasury-address");
-        require(_newTreasury != address(0), "CurveFactory/zero-treasury-address");
+        require(_newTreasury != address(0), "CurveFactory/zero-address");
         protocolTreasury = _newTreasury;
         emit TreasuryUpdated(protocolTreasury);
     }
 
     function updateProtocolFee(int128 _newFee) external onlyOwner {
-        require(totoalFeePercentage >= _newFee, "CurveFactory/protocol-fee-cannot-be-over-100-percent");
+        require(totoalFeePercentage >= _newFee, "CurveFactory/fee-cant-be-over-100%");
         require(_newFee != protocolFee, "CurveFactory/same-protocol-fee");
         protocolFee = _newFee;
         emit ProtocolFeeUpdated(protocolTreasury, protocolFee);
@@ -173,7 +173,7 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
 
     function newCurve(CurveInfo memory _info) public returns (Curve) {
         bytes32 curveId = keccak256(abi.encode(_info._baseCurrency, _info._quoteCurrency));
-        if (curves[curveId] != address(0)) revert("CurveFactory/currency-pair-already-exists");
+        if (curves[curveId] != address(0)) revert("CurveFactory/pair-exists");
         AssimilatorV2 _baseAssim;
         _baseAssim = (assimilatorFactory.getAssimilator(_info._baseCurrency));
         if (address(_baseAssim) == address(0))
