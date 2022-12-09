@@ -27,7 +27,8 @@ library Swaps {
         address indexed origin,
         address indexed target,
         uint256 originAmount,
-        uint256 targetAmount
+        uint256 targetAmount,
+        int128 rawProtocolFee
     );
 
     int128 public constant ONE = 0x10000000000000000;
@@ -80,7 +81,7 @@ library Swaps {
         Assimilators.transferFee(_t.addr, _swapInfo.amountToTreasury, _swapInfo.treasury);
         tAmt_ = Assimilators.outputNumeraire(_t.addr, _swapData._recipient, _swapInfo.amountToUser);
 
-        emit Trade(msg.sender, _swapData._origin, _swapData._target, _swapData._originAmount, tAmt_);
+        emit Trade(msg.sender, _swapData._origin, _swapData._target, _swapData._originAmount, tAmt_, _swapInfo.amountToTreasury);
     }
 
     function viewOriginSwap(
@@ -159,7 +160,7 @@ library Swaps {
 
         oAmt_ = Assimilators.intakeNumeraire(_o.addr, _swapInfo.amountToUser);
 
-        emit Trade(msg.sender, _swapData._origin, _swapData._target, oAmt_, _swapData._targetAmount);
+        emit Trade(msg.sender, _swapData._origin, _swapData._target, oAmt_, _swapData._targetAmount, _swapInfo.amountToTreasury);
     }
 
     function viewTargetSwap(
