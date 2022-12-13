@@ -316,7 +316,8 @@ contract Curve is Storage, MerkleProver, NoDelegateCall {
         address indexed origin,
         address indexed target,
         uint256 originAmount,
-        uint256 targetAmount
+        uint256 targetAmount,
+        int128 rawProtocolFee
     );
 
     event Transfer(address indexed from, address indexed to, uint256 value);
