@@ -70,7 +70,6 @@ contract CurveFactoryV2Test is Test {
         );
 
         dfxCadcCurve = curveFactory.newCurve(cadcCurveInfo);
-        dfxCadcCurve.turnOffWhitelisting();
         // Euroc Curve
         CurveInfo memory eurocCurveInfo = CurveInfo(
             string.concat("dfx-", euroc.name()),
@@ -91,7 +90,6 @@ contract CurveFactoryV2Test is Test {
         );
 
         dfxEurocCurve = curveFactory.newCurve(eurocCurveInfo);
-        dfxEurocCurve.turnOffWhitelisting();
         cheats.stopPrank();
     }
 
