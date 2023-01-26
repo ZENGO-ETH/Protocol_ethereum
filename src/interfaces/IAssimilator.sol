@@ -16,6 +16,9 @@
 pragma solidity ^0.8.13;
 
 interface IAssimilator {
+    function oracleDecimals() external view returns(uint256);
+    function tokenDecimals() external view returns(uint256);
+
     function getRate() external view returns (uint256);
 
     function intakeRaw(uint256 amount) external returns (int128);
