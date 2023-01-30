@@ -36,6 +36,8 @@ import "./ViewLiquidity.sol";
 
 import "./Storage.sol";
 
+import "./MerkleProver.sol";
+
 import "./interfaces/IFreeFromUpTo.sol";
 
 import "./interfaces/ICurveFactory.sol";
@@ -258,7 +260,7 @@ library Curves {
     }
 }
 
-contract Curve is Storage, NoDelegateCall {
+contract Curve is Storage, MerkleProver, NoDelegateCall {
     using SafeMath for uint256;
     using ABDKMath64x64 for int128;
     using SafeERC20 for IERC20;
@@ -306,6 +308,8 @@ contract Curve is Storage, NoDelegateCall {
     event FrozenSet(bool isFrozen);
 
     event EmergencyAlarm(bool isEmergency);
+
+    event WhitelistingStopped();
 
     event Trade(
         address indexed trader,
@@ -362,6 +366,16 @@ contract Curve is Storage, NoDelegateCall {
 
     modifier deadline(uint256 _deadline) {
         require(block.timestamp < _deadline, "Curve/tx-deadline-passed");
+        _;
+    }
+
+    modifier inWhitelistingStage() {
+        require(whitelistingStage, "Curve/whitelist-stage-stopped");
+        _;
+    }
+
+    modifier notInWhitelistingStage() {
+        require(!whitelistingStage, "Curve/whitelist-stage-on-going");
         _;
     }
 
@@ -482,6 +496,12 @@ contract Curve is Storage, NoDelegateCall {
         )
     {
         return Orchestrator.viewCurve(curve);
+    }
+
+    function turnOffWhitelisting() external onlyOwner {
+        emit WhitelistingStopped();
+
+        whitelistingStage = false;
     }
 
     function setEmergency(bool _emergency) external onlyOwner {
@@ -632,6 +652,58 @@ contract Curve is Storage, NoDelegateCall {
     }
 
     /// @notice deposit into the pool with no slippage from the numeraire assets the pool supports
+    /// @param  index Index corresponding to the merkleProof
+    /// @param  account Address coorresponding to the merkleProof
+    /// @param  amount Amount coorresponding to the merkleProof, should always be 1
+    /// @param  merkleProof Merkle proof
+    /// @param  _deposit the full amount you want to deposit into the pool which will be divided up evenly amongst
+    ///                  the numeraire assets of the pool
+    /// @return (the amount of curves you receive in return for your deposit,
+    ///          the amount deposited for each numeraire)
+    function depositWithWhitelist(
+        uint256 index,
+        address account,
+        uint256 amount,
+        bytes32[] calldata merkleProof,
+        uint256 _deposit,
+        uint256 _deadline
+    )
+        external
+        deadline(_deadline)
+        globallyTransactable
+        transactable
+        nonReentrant
+        noDelegateCall
+        inWhitelistingStage
+        isDepositable(address(this), _deposit)
+        returns (uint256, uint256[] memory)
+    {
+        require(amount == 1, "Curve/invalid-amount");
+        require(index <= 473, "Curve/index-out-of-range");
+        require(
+            isWhitelisted(index, account, amount, merkleProof),
+            "Curve/not-whitelisted"
+        );
+        require(msg.sender == account, "Curve/not-approved-user");
+
+        (
+            uint256 curvesMinted_,
+            uint256[] memory deposits_
+        ) = ProportionalLiquidity.proportionalDeposit(curve, _deposit);
+
+        whitelistedDeposited[msg.sender] = whitelistedDeposited[msg.sender].add(
+            curvesMinted_
+        );
+
+        // 10k max deposit
+        if (whitelistedDeposited[msg.sender] > 10000e18) {
+            revert("Curve/exceed-whitelist-maximum-deposit");
+        }
+        increaseTotalMint(msg.sender, curvesMinted_);
+        return (curvesMinted_, deposits_);
+    }
+
+    /// @notice deposit into the pool with no slippage from the numeraire assets the pool supports
     /// @param  _deposit the full amount you want to deposit into the pool which will be divided up evenly amongst
     ///                  the numeraire assets of the pool
     /// @return ( the amount of curves you receive in return for your deposit,
@@ -643,6 +715,7 @@ contract Curve is Storage, NoDelegateCall {
         transactable
         nonReentrant
         noDelegateCall
+        notInWhitelistingStage
         isNotEmergency
         isDepositable(address(this), _deposit)
         returns (uint256, uint256[] memory)
@@ -706,6 +779,11 @@ contract Curve is Storage, NoDelegateCall {
         isNotEmergency
         returns (uint256[] memory withdrawals_)
     {
+        if (whitelistingStage) {
+            whitelistedDeposited[msg.sender] = whitelistedDeposited[msg.sender]
+                .sub(_curvesToBurn);
+        }
+
         decreaseTotalMint(msg.sender, _curvesToBurn);
         return ProportionalLiquidity.proportionalWithdraw(curve, _curvesToBurn);
     }
