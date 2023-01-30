@@ -27,8 +27,8 @@ contract AssimilatorFactory is IAssimilatorFactory, Ownable {
 
     address public curveFactory;
 
-    modifier onlyCurveFactoryOrOwner {
-        require(msg.sender == curveFactory || msg.sender == owner(), "unauthorized");
+    modifier onlyCurveFactory() {
+        require(msg.sender == curveFactory, "unauthorized");
         _;
     }
 
@@ -55,7 +55,7 @@ contract AssimilatorFactory is IAssimilatorFactory, Ownable {
         IOracle _oracle,
         address _token,
         uint256 _tokenDecimals
-    ) external override onlyCurveFactoryOrOwner returns (AssimilatorV2) {
+    ) external override onlyCurveFactory returns (AssimilatorV2) {
         bytes32 assimilatorID = keccak256(abi.encode(_token));
         if (address(assimilators[assimilatorID]) != address(0))
             revert("AssimilatorFactory/oracle-stablecoin-pair-already-exists");

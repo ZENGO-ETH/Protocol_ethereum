@@ -12,6 +12,6 @@ library DefaultCurve {
     uint256 public constant LAMBDA = 1e18;
 
     // Weights
-    uint256 public constant BASE_WEIGHT = 5e17;
-    uint256 public constant QUOTE_WEIGHT = 5e17;
+    uint256 public constant BASE_WEIGHT = 6e17;
+    uint256 public constant QUOTE_WEIGHT = 4e17;
 }

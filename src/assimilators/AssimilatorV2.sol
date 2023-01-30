@@ -34,8 +34,8 @@ contract AssimilatorV2 is IAssimilator {
 
     IOracle private immutable oracle;
     IERC20 private immutable token;
-    uint256 public immutable oracleDecimals;
-    uint256 public immutable tokenDecimals;
+    uint256 private immutable oracleDecimals;
+    uint256 private immutable tokenDecimals;
 
     // solhint-disable-next-line
     constructor(
