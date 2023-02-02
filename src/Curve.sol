@@ -450,6 +450,21 @@ contract Curve is Storage, NoDelegateCall {
         );
     }
 
+    function setAssimilator(
+        address _baseCurrency,
+        address _baseAssim,
+        address _quoteCurrency,
+        address _quoteAssim
+    ) external onlyOwner {
+        Orchestrator.setAssimilator(
+            curve,
+            _baseCurrency,
+            _baseAssim,
+            _quoteCurrency,
+            _quoteAssim
+        );
+    }
+
     /// @notice excludes an assimilator from the curve
     /// @param _derivative the address of the assimilator to exclude
     function excludeDerivative(address _derivative) external onlyOwner {

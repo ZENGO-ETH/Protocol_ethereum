@@ -79,6 +79,29 @@ library Orchestrator {
         emit ParametersSet(_alpha, _beta, curve.delta.mulu(1e18), _epsilon, _lambda);
     }
 
+    function setAssimilator(
+        Storage.Curve storage curve,
+        address _baseCurrency,
+        address _baseAssim,
+        address _quoteCurrency,
+        address _quoteAssim
+    ) external {
+        require(_baseCurrency != address(0), "Curve/numeraire-cannot-be-zeroth-address");
+        require(_baseAssim != address(0), "Curve/numeraire-assimilator-cannot-be-zeroth-address");
+        require(_quoteCurrency != address(0), "Curve/reserve-cannot-be-zeroth-address");
+        require(_quoteAssim != address(0), "Curve/reserve-assimilator-cannot-be-zeroth-address");
+
+        Storage.Assimilator storage _baseAssimilator = curve.assimilators[_baseCurrency];
+        _baseAssimilator.addr = _baseAssim;
+
+        Storage.Assimilator storage _quoteAssimilator = curve.assimilators[_quoteCurrency];
+        _quoteAssimilator.addr = _quoteAssim;
+
+        curve.assets[0] = _baseAssimilator;
+        curve.assets[1] = _quoteAssimilator;
+
+    }
+
     function getFee(Storage.Curve storage curve) private view returns (int128 fee_) {
         int128 _gLiq;
 

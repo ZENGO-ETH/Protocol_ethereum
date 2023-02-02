@@ -30,12 +30,12 @@ contract AssimilatorV2 is IAssimilator {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    IERC20 private constant usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    IERC20 public constant usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
 
-    IOracle private immutable oracle;
-    IERC20 private immutable token;
-    uint256 private immutable oracleDecimals;
-    uint256 private immutable tokenDecimals;
+    IOracle public immutable oracle;
+    IERC20 public immutable token;
+    uint256 public immutable oracleDecimals;
+    uint256 public immutable tokenDecimals;
 
     // solhint-disable-next-line
     constructor(
