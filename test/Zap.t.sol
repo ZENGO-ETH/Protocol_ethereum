@@ -32,7 +32,8 @@ contract ZapTest is Test {
 
     // account order is lp provider, trader, treasury
     MockUser[] public accounts;
-
+    MockUser public victim;
+    
     MockOracleFactory oracleFactory;
     // token order is gold, euroc, cadc, usdc
     IERC20Detailed[] public tokens;
@@ -55,6 +56,7 @@ contract ZapTest is Test {
         for(uint256 i = 0; i < 3; ++i){
             accounts.push(new MockUser());
         }
+        victim = new MockUser();
         // deploy zap contract
         zap = new Zap();
         // deploy gold token & init 3 stable coins
@@ -127,6 +129,12 @@ contract ZapTest is Test {
             tokens[i].approve(address(zap), type(uint256).max);
         }
         cheats.stopPrank();
+        
+        cheats.startPrank(address(victim));
+        IERC20Detailed(Mainnet.EUROC).approve(address(zap), type(uint).max);
+        IERC20Detailed(Mainnet.USDC).approve(address(zap), type(uint).max);
+        deal(address(Mainnet.EUROC), address(victim), 100_000_000e6);
+        cheats.stopPrank();
     }
     // // test swap of forex stable coin(euroc, cadc) usdc
     function testZap(uint256 amt) public {
@@ -158,7 +166,7 @@ contract ZapTest is Test {
             );
             // now try unzap
             IERC20(address(curves[i+1])).approve(address(zap), type(uint256).max);
-            zap.upzapFromQuote(address(curves[i+1]), curves[i+1].balanceOf(address(accounts[1])), block.timestamp+60);
+            zap.upzapFromQuote(address(curves[i+1]), curves[i+1].balanceOf(address(accounts[1])), 0, block.timestamp+60);
             uint256 currentBaseBal = tokens[i+1].balanceOf(address(accounts[1]));
             uint256 currentQuoteBal = tokens[3].balanceOf(address(accounts[1]));
             int256 baseUSDPrice = oracles[i+1].latestAnswer();
@@ -175,5 +183,57 @@ contract ZapTest is Test {
             tokens[3].transfer(address(accounts[2]), tokens[3].balanceOf(address(accounts[1])));
             cheats.stopPrank();
         }
+    }
+
+    function test_Unzap() public {
+        // first LP deposit 
+        cheats.startPrank(address(accounts[0])); 
+        curves[1].deposit(1_000_000_000 * 1e18, block.timestamp + 60); 
+        cheats.stopPrank();
+        
+        cheats.startPrank(address(victim));
+        
+        // victim zaps base -> LP
+        zap.zapFromBase(address(curves[1]), 20_000_000, block.timestamp + 60, 0);
+        // current base amount
+        uint256 balanceAfterZap = tokens[1].balanceOf(address(victim));
+        IERC20(address(curves[1])).approve(address(zap), type(uint256).max);
+        // victim unzaps LP -> base
+        zap.upzapFromQuote(address(curves[1]), curves[1].balanceOf(address(victim)), 19_900_000, block.timestamp + 60);
+
+        uint256 balanceAfterUnzap = tokens[1].balanceOf(address(victim));
+        
+        emit log_named_uint("unzap received base", balanceAfterUnzap - balanceAfterZap);
+    }
+
+    function testFail_UnzapMinAmountNotMet() public {
+        // first LP deposit 
+        cheats.startPrank(address(accounts[0])); 
+        curves[1].deposit(1000000000 * 1e18, block.timestamp + 60); 
+        cheats.stopPrank();
+
+        // Second stage
+        cheats.startPrank(address(victim));
+
+        // victim zaps base -> LP again
+        zap.zapFromBase(address(curves[1]), 20_000_000, block.timestamp + 60, 0);
+
+        // current base amount
+        uint256 secondBalanceAfterZap = tokens[1].balanceOf(address(victim));
+        IERC20(address(curves[1])).approve(address(zap), type(uint256).max);
+        cheats.stopPrank();
+
+        // front-runner swaps quote -> base via zap
+        emit log_named_uint("USDC amount of attacker",
+        tokens[3].balanceOf(address(accounts[1])));
+        cheats.startPrank(address(accounts[1]));
+
+        // amount to swap can increase, depending on the alpha/beta parameters
+        uint256 amount1 = curves[1].originSwap(address(tokens[3]), address(tokens[1]), 200000000000000, 0, block.timestamp + 60);
+        cheats.stopPrank();
+
+        // victim unzaps LP -> base, damaged via front-run
+        cheats.startPrank(address(victim));
+        zap.upzapFromQuote(address(curves[1]), curves[1].balanceOf(address(victim)), 19_900_000, block.timestamp+60);
     }
 }

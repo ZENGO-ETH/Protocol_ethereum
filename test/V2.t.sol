@@ -12,6 +12,7 @@ import "../src/AssimilatorFactory.sol";
 import "../src/CurveFactoryV2.sol";
 import "../src/Curve.sol";
 import "../src/Structs.sol";
+import "../src/Zap.sol";
 import "../src/lib/ABDKMath64x64.sol";
 
 import "./lib/MockUser.sol";
