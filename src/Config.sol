@@ -78,7 +78,7 @@ contract Config is Ownable, IConfig {
     }
 
     function setGlobalGuardAmount (uint256 amount) external virtual override onlyOwner {
-        globalGuardAmt = amount;
+        globalGuardAmt = amount - 1e6;
         emit GlobalGuardAmountSet (globalGuardAmt);
     }
 
@@ -88,7 +88,7 @@ contract Config is Ownable, IConfig {
     }
 
     function setPoolGuardAmount (address pool, uint256 amount) external virtual override onlyOwner {
-        poolGuardAmt[pool] = amount;
+        poolGuardAmt[pool] = amount - 1e6;
         emit PoolGuardAmountSet(pool, amount);
     }
 

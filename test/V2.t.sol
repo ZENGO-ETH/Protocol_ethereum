@@ -1,3 +1,5 @@
+
+
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
@@ -308,7 +310,7 @@ contract V2Test is Test {
             cheats.startPrank(address(accounts[0]));
             tokens[i].approve(address(curves[i]), type(uint).max);
             tokens[3].approve(address(curves[i]), type(uint).max);
-            curves[i].deposit(poolForexBal.div(percentage).mul(100),0,0,type(uint256).max, type(uint256).max, block.timestamp + 60);
+            curves[i].deposit(poolForexBal.div(percentage).mul(100) + 1e6, 0,0,type(uint256).max, type(uint256).max, block.timestamp + 60);
             cheats.stopPrank();
         }
     }

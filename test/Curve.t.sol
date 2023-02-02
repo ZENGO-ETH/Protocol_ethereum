@@ -190,7 +190,7 @@ contract CurveFactoryV2Test is Test {
         assertApproxEqRel(cadcBalanceAfterSwap, cadcBalanceBeforeSwap, 0.01e18);
         assertApproxEqRel(usdcBalanceAfterSwap, usdcBalanceBeforeSwap, 0.01e18);
 
-        dfxCadcCurve.withdraw(100_000e18, block.timestamp + 60);
+        dfxCadcCurve.withdraw(dfxCadcCurve.balanceOf(address(liquidityProvider)), block.timestamp + 60);
         uint256 cadcBalanceAfterWithdraw = cadc.balanceOf(address(liquidityProvider));
         uint256 usdcBalanceAfterWithdraw = usdc.balanceOf(address(liquidityProvider));
 

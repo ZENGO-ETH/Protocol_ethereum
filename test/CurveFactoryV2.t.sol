@@ -174,14 +174,14 @@ contract CurveFactoryV2Test is Test {
         (uint256 one, uint256[] memory derivatives) = dfxCadcCurve.viewDeposit(100_000e18);
         cheats.stopPrank();
 
-        assertEq(dfxCadcCurve.balanceOf(address(liquidityProvider)), 100_000e18);
+        assertApproxEqAbs(dfxCadcCurve.balanceOf(address(liquidityProvider)), 100_000e18, 1e6);
 
         cheats.prank(address(this));
         IConfig(address(config)).setGlobalFrozen(true);
         
         // can still withdraw after global freeze
         cheats.prank(address(liquidityProvider));
-        dfxCadcCurve.withdraw(100_000e18, block.timestamp + 60);
+        dfxCadcCurve.withdraw(100_000e18 - 1e6, block.timestamp + 60);
     }
 
     function test_depositGlobalGuard(uint256 _gGuardAmt) public {
@@ -218,7 +218,7 @@ contract CurveFactoryV2Test is Test {
         cadc.approve(address(dfxCadcCurve), type(uint).max);
         usdc.approve(address(dfxCadcCurve), type(uint).max);
 
-        dfxCadcCurve.deposit(100_000e18 + _extraAmt,0,0,type(uint256).max, type(uint256).max, block.timestamp + 60);
+        dfxCadcCurve.deposit(100_000e18 + _extraAmt, 0, 0,type(uint256).max, type(uint256).max, block.timestamp + 60);
         cheats.stopPrank();
     }
 

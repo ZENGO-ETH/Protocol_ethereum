@@ -77,6 +77,7 @@ library ProportionalLiquidity {
             _newShells = _newShells.div(_oGLiq);
         }
 
+        require(_newShells > 0, "Proportional Liquidity/can't mint negative amount");
         mint(curve, msg.sender, curves_ = _newShells.mulu(1e18));
 
         return (curves_, deposits_);
@@ -241,11 +242,29 @@ library ProportionalLiquidity {
         address account,
         uint256 amount
     ) private {
-        curve.totalSupply = mintAdd(curve.totalSupply, amount);
-
-        curve.balances[account] = mintAdd(curve.balances[account], amount);
-
-        emit Transfer(address(0), msg.sender, amount);
+        uint256 minLock = 1e6;
+        if (curve.totalSupply == 0) {
+            require(amount > minLock, "Proportional Liquidity/amount too small!");
+            uint256 toMintAmt = amount - minLock;
+            // mint to lp provider
+            curve.totalSupply = mintAdd(curve.totalSupply, toMintAmt);
+            curve.balances[account] = mintAdd(
+                curve.balances[account],
+                toMintAmt
+            );
+            emit Transfer(address(0), msg.sender, toMintAmt);
+            // mint to 0 address
+            curve.totalSupply = mintAdd(curve.totalSupply, minLock);
+            curve.balances[address(0)] = mintAdd(
+                curve.balances[address(0)],
+                minLock
+            );
+            emit Transfer(address(this), address(0), minLock);
+        } else {
+            curve.totalSupply = mintAdd(curve.totalSupply, amount);
+            curve.balances[account] = mintAdd(curve.balances[account], amount);
+            emit Transfer(address(0), msg.sender, amount);
+        }
     }
 
     function mintAdd(uint256 x, uint256 y) private pure returns (uint256 z) {

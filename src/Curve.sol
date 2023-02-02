@@ -658,6 +658,8 @@ contract Curve is Storage, NoDelegateCall {
         isDepositable(address(this), _deposit)
         returns (uint256, uint256[] memory)
     {
+        require(_deposit >0, "Curve/deposit_below_zero");
+        
         // (curvesMinted_,  deposits_)
         DepositData memory _depositData;
         _depositData.deposits = _deposit;
