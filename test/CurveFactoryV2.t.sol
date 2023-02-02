@@ -250,7 +250,6 @@ contract CurveFactoryV2Test is Test {
     }
 
     function test_depositPoolCap() public {
-        
         // set pool cap to 100k
         curveFactory.setPoolCap(address(dfxEurocCurve), 100_000e18);
 

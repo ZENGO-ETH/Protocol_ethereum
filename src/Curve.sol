@@ -393,14 +393,9 @@ contract Curve is Storage, NoDelegateCall {
         if (!ICurveFactory(curveFactory).isPoolGuarded(pool)) {
             _;
         } else {
-            uint256 poolGuardAmt = ICurveFactory(curveFactory)
-                .getPoolGuardAmount(pool);
-            uint256 userLptBal = curve.totalMinted[msg.sender];
-            require(
-                userLptBal.add(deposits) <= poolGuardAmt,
-                "curve/can't deposit too much"
-            );
             _;
+            uint256 poolGuardAmt = ICurveFactory(curveFactory).getPoolGuardAmount(pool);
+            require(curve.balances[msg.sender] <= poolGuardAmt, "curve/deposit-exceeds-guard-amt");
         }
     }
 
@@ -645,7 +640,7 @@ contract Curve is Storage, NoDelegateCall {
             _targetAmount
         );
     }
-
+ 
     /// @notice deposit into the pool with no slippage from the numeraire assets the pool supports
     /// @param  _deposit the full amount you want to deposit into the pool which will be divided up evenly amongst
     ///                  the numeraire assets of the pool
@@ -667,7 +662,6 @@ contract Curve is Storage, NoDelegateCall {
             uint256 curvesMinted_,
             uint256[] memory deposits_
         ) = ProportionalLiquidity.proportionalDeposit(curve, _deposit);
-        increaseTotalMint(msg.sender, curvesMinted_);
         return (curvesMinted_, deposits_);
     }
 
@@ -687,11 +681,6 @@ contract Curve is Storage, NoDelegateCall {
         return ProportionalLiquidity.viewProportionalDeposit(curve, _deposit);
     }
 
-    function increaseTotalMint(address minter, uint256 amount) internal {
-        uint256 original = curve.totalMinted[minter];
-        curve.totalMinted[minter] = original.add(amount);
-    }
-
     /// @notice  Emergency withdraw tokens in the event that the oracle somehow bugs out
     ///          and no one is able to withdraw due to the invariant check
     /// @param   _curvesToBurn the full amount you want to withdraw from the pool which will be withdrawn from evenly amongst the
@@ -705,7 +694,6 @@ contract Curve is Storage, NoDelegateCall {
         noDelegateCall
         returns (uint256[] memory withdrawals_)
     {
-        decreaseTotalMint(msg.sender, _curvesToBurn);
         return ProportionalLiquidity.proportionalWithdraw(curve, _curvesToBurn);
     }
 
@@ -721,7 +709,6 @@ contract Curve is Storage, NoDelegateCall {
         isNotEmergency
         returns (uint256[] memory withdrawals_)
     {
-        decreaseTotalMint(msg.sender, _curvesToBurn);
         return ProportionalLiquidity.proportionalWithdraw(curve, _curvesToBurn);
     }
 
@@ -741,11 +728,6 @@ contract Curve is Storage, NoDelegateCall {
                 curve,
                 _curvesToBurn
             );
-    }
-
-    function decreaseTotalMint(address burner, uint256 amount) internal {
-        uint256 original = curve.totalMinted[burner];
-        curve.totalMinted[burner] = original.sub(amount);
     }
 
     function supportsInterface(bytes4 _interface)
