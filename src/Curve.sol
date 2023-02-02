@@ -406,6 +406,7 @@ contract Curve is Storage, NoDelegateCall {
         uint256[] memory _assetWeights,
         address _factory
     ) {
+        require(_factory != address(0), "Curve/curve factory zero address!");
         owner = msg.sender;
         name = _name;
         symbol = _symbol;
