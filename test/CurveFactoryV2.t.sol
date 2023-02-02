@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import "../src/AssimilatorFactory.sol";
 import "../src/CurveFactoryV2.sol";
 import "../src/Curve.sol";
+import "../src/Router.sol";
 import "../src/Config.sol";
 import "../src/interfaces/IERC20Detailed.sol";
 
@@ -13,6 +14,8 @@ import "./lib/MockUser.sol";
 import "./lib/CheatCodes.sol";
 import "./lib/Address.sol";
 import "./lib/CurveParams.sol";
+import "./lib/MockChainlinkOracle.sol";
+import "./lib/MockOracleFactory.sol";
 
 contract CurveFactoryV2Test is Test {
     CheatCodes cheats = CheatCodes(HEVM_ADDRESS);
@@ -22,11 +25,16 @@ contract CurveFactoryV2Test is Test {
 
     AssimilatorFactory assimilatorFactory;
     CurveFactoryV2 curveFactory;
+
     Config config;
 
     IERC20Detailed usdc = IERC20Detailed(Mainnet.USDC);
     IERC20Detailed cadc = IERC20Detailed(Mainnet.CADC);
     IERC20Detailed euroc = IERC20Detailed(Mainnet.EUROC);
+
+    MockOracleFactory oracleFactory;
+    MockUser swapper;
+    IOracle fakeCadcOracles;
 
     IOracle usdcOracle = IOracle(Mainnet.CHAINLINK_USDC_USD);
     IOracle cadcOracle = IOracle(Mainnet.CHAINLINK_CAD_USD);
@@ -37,10 +45,13 @@ contract CurveFactoryV2Test is Test {
 
     int128 public protocolFee = 50;
 
+    Router router;
+
     function setUp() public {
         treasury = new MockUser();
         newTreasury = new MockUser();
         liquidityProvider = new MockUser();
+        swapper = new MockUser();
 
         config = new Config(protocolFee,address(treasury));
 
@@ -48,6 +59,15 @@ contract CurveFactoryV2Test is Test {
         curveFactory = new CurveFactoryV2(
             address(assimilatorFactory),
             address(config)
+        );
+
+        router = new Router(address(curveFactory));
+
+        // deploy mock oracle factory for deployed token (named gold)
+        oracleFactory = new MockOracleFactory();
+        fakeCadcOracles = oracleFactory.newOracle(
+            // equiv to 1.91 because its 8 decimals
+            address(cadc), "CADC-USDC-ORACLE", 8, 1_91_427_874
         );
 
         assimilatorFactory.setCurveFactory(address(curveFactory));
@@ -61,7 +81,7 @@ contract CurveFactoryV2Test is Test {
             address(usdc),
             DefaultCurve.BASE_WEIGHT,
             DefaultCurve.QUOTE_WEIGHT,
-            cadcOracle,
+            fakeCadcOracles,
             usdcOracle,
             DefaultCurve.ALPHA,
             DefaultCurve.BETA,
@@ -278,6 +298,42 @@ contract CurveFactoryV2Test is Test {
         cheats.stopPrank();
     }
 
+    function testFail_TargetSwapFreeMoney() public { 
+        // set this for no fuzzing 
+        // CADC is worth 1.9 USDC right here
+        uint256 price = 191427874;
+        // this is like 500k of USDC (249k * 1.9)
+        uint256 router_amounts = 490_00e6;
+        uint256 amounts = 250_000e18;
+        
+        cheats.startPrank(address(liquidityProvider));
+        deal(address(cadc), address(liquidityProvider), 1500000e18 * 1e8 / price); 
+        deal(address(usdc), address(liquidityProvider), 1500000e6); 
+        cadc.approve(address(dfxCadcCurve), type(uint256).max); 
+        usdc.approve(address(dfxCadcCurve), type(uint256).max);
+        
+        // the LP provides $2M worth of LP
+        dfxCadcCurve.deposit(2_000_000e18, block.timestamp + 60);
+        cheats.stopPrank();
+        
+        cheats.startPrank(address(swapper));
+        deal(address(usdc), address(swapper), 1_500_000e6);
+        
+        cadc.approve(address(dfxCadcCurve), type(uint256).max);
+        usdc.approve(address(dfxCadcCurve), type(uint256).max);
+
+        cadc.approve(address(router), type(uint256).max);
+        usdc.approve(address(router), type(uint256).max);
+        
+        // TARGET CADC amounts should be in cadc
+        uint256 amountReal = dfxCadcCurve.targetSwap(address(usdc), address(cadc), type(uint256).max, amounts, block.timestamp + 60);
+        uint256 amountRecv = dfxCadcCurve.originSwap(address(cadc), address(usdc), cadc.balanceOf(address(swapper)), 0, block.timestamp + 60);
+
+        cheats.stopPrank();
+
+        require(usdc.balanceOf(address(swapper)) >= 1510000e6, "free money!!");
+    }
+    
     function testFail_invalidNewCurveBase() public {
         cheats.startPrank(address(treasury));
         CurveInfo memory invalidCurveInfo = CurveInfo(
