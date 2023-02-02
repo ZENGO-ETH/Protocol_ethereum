@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
@@ -26,7 +25,7 @@ import ".././lib/MockToken.sol";
 
 import ".././utils/Utils.sol";
 
-contract SwapFeeTest is Test {
+contract MinDepositTest is Test {
     using SafeMath for uint256;
     CheatCodes cheats = CheatCodes(HEVM_ADDRESS);
     Utils utils;
@@ -40,8 +39,6 @@ contract SwapFeeTest is Test {
     IOracle[] public oracles;
     Curve[] public curves;
     uint256[] public decimals;
-
-    uint256[] public dividends = [20, 2];
 
     CurveFactoryV2 curveFactory;
     AssimilatorFactory assimFactory;
@@ -77,8 +74,8 @@ contract SwapFeeTest is Test {
         oracles.push(IOracle(Mainnet.CHAINLINK_USDC_USD));
 
         config = new Config(protocolFee,address(accounts[2]));
+
         // deploy new assimilator factory & curveFactory v2
-        
         assimFactory = new AssimilatorFactory();
         curveFactory = new CurveFactoryV2(
             address(assimFactory),
@@ -131,89 +128,102 @@ contract SwapFeeTest is Test {
         cheats.stopPrank();
     }
 
-    // // test swap of forex stable coin(euroc, cadc) usdc
-    function testSwapFromForexToUsdcFee(uint256 amt) public {
-        cheats.assume(amt > 100);
-        cheats.assume(amt < 10000000);
-        // uint256 amt = 1000000;
-        for (uint256 i = 0; i < 2; ++i) {
-            // mint token to trader
-            deal(
-                address(tokens[i + 1]),
-                address(accounts[1]),
-                amt * decimals[i + 1]
-            );
+    function testMinDeposit() public {
+        uint256 amt = 1000000;
+        // mint token to trader
+        deal(address(tokens[1]), address(accounts[1]), amt * decimals[1]);
 
-            uint256 forexBalance = tokens[i + 1].balanceOf(
-                address(accounts[1])
-            );
+        uint256 eurocToSend = 1000000;
+        // mint tokens to attacker
+        deal(address(tokens[1]), address(curves[1]), eurocToSend);
+        deal(address(tokens[3]), address(curves[1]), eurocToSend * 100);
 
-            cheats.startPrank(address(accounts[1]));
-            tokens[i + 1].approve(address(curves[i + 1]), type(uint256).max);
-            tokens[3].approve(address(curves[i + 1]), type(uint256).max);
-            cheats.stopPrank();
+        uint256 forexBalance = tokens[1].balanceOf(address(accounts[1]));
 
-            // first deposit
-            cheats.startPrank(address(accounts[0]));
-            curves[i + 1].deposit(1000000000 * 1e18,0,0,type(uint256).max, type(uint256).max, block.timestamp + 60);
-            cheats.stopPrank();
+        cheats.startPrank(address(accounts[1]));
+        tokens[1].approve(address(curves[1]), type(uint256).max);
+        tokens[3].approve(address(curves[1]), type(uint256).max);
+        cheats.stopPrank();
+        // destroy balance by first sending 100:1 Usdc : Euroc ratio
 
-            cheats.startPrank(address(accounts[1]));
-            // now swap forex stable coin to usdc
-            curves[i + 1].originSwap(
-                address(tokens[i + 1]),
-                address(tokens[3]),
-                forexBalance,
-                0,
-                block.timestamp + 60
-            );
-            cheats.stopPrank();
-            console.log(tokens[3].balanceOf(address(accounts[1])));
-            console.log(tokens[3].balanceOf(address(accounts[2])));
-            assertApproxEqAbs(
-                (tokens[3].balanceOf(address(accounts[1])) * 20) / 100000,
-                tokens[3].balanceOf(address(accounts[2])),
-                tokens[3].balanceOf(address(accounts[1])) / 100000
-            );
-        }
+        uint256 minEurocToDeposit = 500000000000000;
+        uint256 minUsdcToDeposit = 350000000000000;
+        // first deposit
+        cheats.startPrank(address(accounts[0]));
+        curves[1].deposit(1000000000 * 1e18, 0, 0,type(uint256).max,type(uint256).max, block.timestamp + 60);
+        cheats.stopPrank();
+
+        // read bal
+        uint256 crvEurocBal = tokens[1].balanceOf(address(curves[1]));
+        uint256 crvUsdcBal = tokens[3].balanceOf(address(curves[1]));
+        console.logString("original balance");
+        console.log(eurocToSend);
+        console.log(eurocToSend * 100);
+        console.logString("new balance");
+        console.log(crvEurocBal);
+        console.log(crvUsdcBal);
     }
 
-    // // test swap of forex stable coin(euroc, cadc) usdc
-    function testSwapFromUsdcToForexFee(uint256 amt) public {
-        cheats.assume(amt > 100);
-        cheats.assume(amt < 10000000);
-        // uint256 amt = 1000000;
-        for (uint256 i = 0; i < 2; ++i) {
-            // mint token to trader
-            deal(address(tokens[3]), address(accounts[1]), amt * decimals[3]);
+    function testFailMinDeposit() public {
+        uint256 amt = 1000000;
+        // mint token to trader
+        deal(address(tokens[1]), address(accounts[1]), amt * decimals[1]);
 
-            uint256 usdcBalance = tokens[3].balanceOf(address(accounts[1]));
+        uint256 eurocToSend = 1000000;
+        // destroy balance by first sending 100:1 Usdc : Euroc ratio
+        deal(address(tokens[1]), address(curves[1]), eurocToSend);
+        deal(address(tokens[3]), address(curves[1]), eurocToSend * 100);
 
-            cheats.startPrank(address(accounts[1]));
-            tokens[i + 1].approve(address(curves[i + 1]), type(uint256).max);
-            tokens[3].approve(address(curves[i + 1]), type(uint256).max);
-            cheats.stopPrank();
+        uint256 forexBalance = tokens[1].balanceOf(address(accounts[1]));
 
-            // first deposit
-            cheats.startPrank(address(accounts[0]));
-            curves[i + 1].deposit(1000000000 * 1e18,0,0,type(uint256).max, type(uint256).max, block.timestamp + 60);
-            cheats.stopPrank();
+        cheats.startPrank(address(accounts[1]));
+        tokens[1].approve(address(curves[1]), type(uint256).max);
+        tokens[3].approve(address(curves[1]), type(uint256).max);
+        cheats.stopPrank();
 
-            cheats.startPrank(address(accounts[1]));
-            // now swap usdc to forex stable coin
-            curves[i + 1].originSwap(
-                address(tokens[3]),
-                address(tokens[i + 1]),
-                usdcBalance,
-                0,
-                block.timestamp + 60
-            );
-            cheats.stopPrank();
-            assertApproxEqAbs(
-                (tokens[i + 1].balanceOf(address(accounts[1])) * 20) / 100000,
-                tokens[i + 1].balanceOf(address(accounts[2])),
-                tokens[i + 1].balanceOf(address(accounts[1])) / 100000
-            );
-        }
+        uint256 minEurocToDeposit = 500000000000000;
+        uint256 minUsdcToDeposit = 350000000000000;
+        // deposit
+        cheats.startPrank(address(accounts[0]));
+        curves[1].deposit(
+            1000000000 * 1e18,
+            minUsdcToDeposit,
+            minEurocToDeposit,
+            0,
+            0,
+            block.timestamp + 60
+        );
+        cheats.stopPrank();
+    }
+
+    function testFailMaxDeposit() public {
+        uint256 amt = 10000000;
+        // mint token to trader
+        deal(address(tokens[1]), address(accounts[1]), amt * decimals[1]);
+
+        // mint 100 euro, 1 usdc to the pool
+        deal(address(tokens[1]), address(curves[1]), 100 * decimals[1]);
+        deal(address(tokens[3]), address(curves[1]), 1 * decimals[3]);
+
+        uint256 forexBalance = tokens[1].balanceOf(address(accounts[1]));
+
+        cheats.startPrank(address(accounts[1]));
+        tokens[1].approve(address(curves[1]), type(uint256).max);
+        tokens[3].approve(address(curves[1]), type(uint256).max);
+        cheats.stopPrank();
+
+        uint256 maxEurocToDeposit = 600000*decimals[1];
+        uint256 maxUsdcToDeposit = 700000 * decimals[3];
+        // deposit
+        cheats.startPrank(address(accounts[0]));
+        curves[1].deposit(
+            1000000 * 1e18,
+            0,
+            0,
+            maxUsdcToDeposit,
+            maxEurocToDeposit,
+            block.timestamp + 60
+        );
+        cheats.stopPrank();
     }
 }

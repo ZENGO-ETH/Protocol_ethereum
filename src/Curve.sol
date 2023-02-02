@@ -647,7 +647,7 @@ contract Curve is Storage, NoDelegateCall {
     ///                  the numeraire assets of the pool
     /// @return ( the amount of curves you receive in return for your deposit,
     ///           the amount deposited for each numeraire)
-    function deposit(uint256 _deposit, uint256 _deadline)
+    function deposit(uint256 _deposit,uint256 _minQuoteAmount,uint256 _minBaseAmount,uint256 _maxQuoteAmount, uint256 _maxBaseAmount, uint256 _deadline)
         external
         deadline(_deadline)
         globallyTransactable
@@ -659,10 +659,16 @@ contract Curve is Storage, NoDelegateCall {
         returns (uint256, uint256[] memory)
     {
         // (curvesMinted_,  deposits_)
+        DepositData memory _depositData;
+        _depositData.deposits = _deposit;
+        _depositData.minQuote = _minQuoteAmount;
+        _depositData.minBase = _minBaseAmount;
+        _depositData.maxQuote = _maxQuoteAmount;
+        _depositData.maxBase = _maxBaseAmount;
         (
             uint256 curvesMinted_,
             uint256[] memory deposits_
-        ) = ProportionalLiquidity.proportionalDeposit(curve, _deposit);
+        ) = ProportionalLiquidity.proportionalDeposit(curve, _depositData);
         return (curvesMinted_, deposits_);
     }
 

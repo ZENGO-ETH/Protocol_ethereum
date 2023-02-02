@@ -10,6 +10,7 @@ import "./lib/UnsafeMath64x64.sol";
 import "./lib/ABDKMath64x64.sol";
 
 import "./CurveMath.sol";
+import "./Structs.sol";
 
 library ProportionalLiquidity {
     using ABDKMath64x64 for uint256;
@@ -21,11 +22,11 @@ library ProportionalLiquidity {
     int128 public constant ONE = 0x10000000000000000;
     int128 public constant ONE_WEI = 0x12;
 
-    function proportionalDeposit(Storage.Curve storage curve, uint256 _deposit)
+    function proportionalDeposit(Storage.Curve storage curve, DepositData memory depositData)
         external
         returns (uint256 curves_, uint256[] memory)
     {
-        int128 __deposit = _deposit.divu(1e18);
+        int128 __deposit = depositData.deposits.divu(1e18);
 
         uint256 _length = curve.assets.length;
 
@@ -52,11 +53,17 @@ library ProportionalLiquidity {
             uint256 _quoteWeight = curve.weights[1].mulu(1e18);
 
             for (uint256 i = 0; i < _length; i++) {
+                IntakeNumLpRatioInfo memory info;
+                info.baseWeight = _baseWeight;
+                info.minBase = depositData.minBase;
+                info.maxBase = depositData.maxBase;
+                info.quoteWeight = _quoteWeight;
+                info.minQuote = depositData.minQuote;
+                info.maxQuote = depositData.maxQuote;
+                info.amount = _oBals[i].mul(_multiplier).add(ONE_WEI);
                 deposits_[i] = Assimilators.intakeNumeraireLPRatio(
                     curve.assets[i].addr,
-                    _baseWeight,
-                    _quoteWeight,
-                    _oBals[i].mul(_multiplier).add(ONE_WEI)
+                    info
                 );
             }
         }

@@ -151,7 +151,7 @@ contract TargetSwapFeeTest is Test {
 
         // first deposit
         cheats.startPrank(address(accounts[0]));
-        curves[1].deposit(1000000000 * 1e18, block.timestamp + 60);
+        curves[1].deposit(1000000000 * 1e18,0,0,type(uint256).max, type(uint256).max, block.timestamp + 60);
         cheats.stopPrank();
 
         uint256 forexBeforeSwap = tokens[1].balanceOf(address(accounts[1]));

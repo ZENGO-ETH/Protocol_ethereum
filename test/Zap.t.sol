@@ -155,7 +155,7 @@ contract ZapTest is Test {
 
             // first deposit
             cheats.startPrank(address(accounts[0]));
-            curves[i+1].deposit(1000000000 * 1e18, block.timestamp + 60);
+            curves[i+1].deposit(1000000000 * 1e18,0,0,type(uint256).max, type(uint256).max, block.timestamp + 60);
             cheats.stopPrank();
 
             cheats.startPrank(address(accounts[1]));
@@ -190,7 +190,7 @@ contract ZapTest is Test {
     function test_Unzap() public {
         // first LP deposit 
         cheats.startPrank(address(accounts[0])); 
-        curves[1].deposit(1_000_000_000 * 1e18, block.timestamp + 60); 
+        curves[1].deposit(1_000_000_000 * 1e18,0,0,type(uint256).max, type(uint256).max, block.timestamp + 60); 
         cheats.stopPrank();
         
         cheats.startPrank(address(victim));
@@ -211,7 +211,7 @@ contract ZapTest is Test {
     function testFail_UnzapMinAmountNotMet() public {
         // first LP deposit 
         cheats.startPrank(address(accounts[0])); 
-        curves[1].deposit(1000000000 * 1e18, block.timestamp + 60); 
+        curves[1].deposit(1000000000 * 1e18,0,0,type(uint256).max, type(uint256).max, block.timestamp + 60); 
         cheats.stopPrank();
 
         // Second stage

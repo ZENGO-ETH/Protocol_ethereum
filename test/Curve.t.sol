@@ -39,7 +39,7 @@ contract CurveFactoryV2Test is Test {
     Curve dfxCadcCurve;
     Curve dfxEurocCurve;
 
-    int128 public protocolFee = 50;
+    int128 public protocolFee = 50000;
 
     function setUp() public {
         treasury = new MockUser();
@@ -174,7 +174,7 @@ contract CurveFactoryV2Test is Test {
         deal(address(usdc), address(liquidityProvider), 100_000e6);
         cadc.approve(address(dfxCadcCurve), type(uint).max);
         usdc.approve(address(dfxCadcCurve), type(uint).max); 
-        dfxCadcCurve.deposit(100_000e18, block.timestamp + 60);
+        dfxCadcCurve.deposit(100_000e18,0,0,type(uint256).max, type(uint256).max, block.timestamp + 60);
 
         uint256 cadcBalanceBeforeSwap = cadc.balanceOf(address(liquidityProvider));
         uint256 usdcBalanceBeforeSwap = usdc.balanceOf(address(liquidityProvider));

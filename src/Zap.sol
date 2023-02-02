@@ -158,29 +158,27 @@ contract Zap {
         }
 
         // Calculate deposit amount
-        uint256 baseAmount = IERC20(base).balanceOf(address(this));
-        uint256 quoteAmount = USDC.balanceOf(address(this));
         (uint256 depositAmount, , ) =
             _calcDepositAmount(
                 _curve,
                 base,
                 DepositData({
-                    curBaseAmount: baseAmount,
-                    curQuoteAmount: quoteAmount,
-                    maxBaseAmount: baseAmount,
-                    maxQuoteAmount: quoteAmount
+                    curBaseAmount: IERC20(base).balanceOf(address(this)),
+                    curQuoteAmount: USDC.balanceOf(address(this)),
+                    maxBaseAmount: IERC20(base).balanceOf(address(this)),
+                    maxQuoteAmount: USDC.balanceOf(address(this))
                 })
             );
 
         // Can only deposit the smaller amount as we won't have enough of the
         // token to deposit
         IERC20(base).safeApprove(_curve, 0);
-        IERC20(base).safeApprove(_curve, baseAmount);
+        IERC20(base).safeApprove(_curve, IERC20(base).balanceOf(address(this)));
 
         USDC.safeApprove(_curve, 0);
-        USDC.safeApprove(_curve, quoteAmount);
+        USDC.safeApprove(_curve, USDC.balanceOf(address(this)));
 
-        (uint256 lpAmount, ) = Curve(_curve).deposit(depositAmount, _deadline);
+        (uint256 lpAmount, ) = Curve(_curve).deposit(depositAmount,0,0,type(uint256).max, type(uint256).max, _deadline);
         require(lpAmount >= _minLPAmount, "!Zap/not-enough-lp-amount");
 
         // Transfer all remaining balances back to user

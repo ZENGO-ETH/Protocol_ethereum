@@ -18,6 +18,7 @@ pragma solidity ^0.8.13;
 import "../lib/openzeppelin-contracts/contracts/utils/Address.sol";
 import "./interfaces/IAssimilator.sol";
 import "./lib/ABDKMath64x64.sol";
+import "./Structs.sol";
 
 library Assimilators {
     using ABDKMath64x64 for int128;
@@ -102,18 +103,20 @@ library Assimilators {
 
     function intakeNumeraireLPRatio(
         address _assim,
-        uint256 _baseWeight,
-        uint256 _quoteWeight,
-        int128 _amount
+        IntakeNumLpRatioInfo memory info
     ) internal returns (uint256 amt_) {
-        bytes memory data =
-            abi.encodeWithSelector(
-                iAsmltr.intakeNumeraireLPRatio.selector,
-                _baseWeight,
-                _quoteWeight,
-                address(this),
-                _amount
-            );
+        bytes memory data = abi.encodeWithSelector(
+            iAsmltr.intakeNumeraireLPRatio.selector,
+            info.baseWeight,
+            info.minBase,
+            info.maxBase,
+            info.quoteWeight,
+            info.minQuote,
+            info.maxQuote,
+            address(this),
+            // _amount
+            info.amount
+        );
 
         amt_ = abi.decode(delegate(_assim, data), (uint256));
     }
