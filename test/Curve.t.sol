@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import "../src/AssimilatorFactory.sol";
 import "../src/CurveFactoryV2.sol";
 import "../src/Curve.sol";
+import "../src/Config.sol";
 import "../src/interfaces/IERC20Detailed.sol";
 import "../src/interfaces/IAssimilator.sol";
 import "../src/interfaces/IOracle.sol";
@@ -25,6 +26,7 @@ contract CurveFactoryV2Test is Test {
 
     AssimilatorFactory assimilatorFactory;
     CurveFactoryV2 curveFactory;
+    Config config;
 
     IERC20Detailed usdc = IERC20Detailed(Mainnet.USDC);
     IERC20Detailed cadc = IERC20Detailed(Mainnet.CADC);
@@ -44,12 +46,13 @@ contract CurveFactoryV2Test is Test {
         newTreasury = new MockUser();
         liquidityProvider = new MockUser();
 
+        config = new Config(protocolFee,address(treasury));
+
         cheats.startPrank(address(treasury));
         assimilatorFactory = new AssimilatorFactory();
         curveFactory = new CurveFactoryV2(
-            protocolFee,
-            address(treasury),
-            address(assimilatorFactory)
+            address(assimilatorFactory),
+            address(config)
         );
 
         assimilatorFactory.setCurveFactory(address(curveFactory));
@@ -71,9 +74,7 @@ contract CurveFactoryV2Test is Test {
             DefaultCurve.BASE_WEIGHT,
             DefaultCurve.QUOTE_WEIGHT,
             eurocOracle,
-            18,
             eurocOracle,
-            6,
             DefaultCurve.ALPHA,
             DefaultCurve.BETA,
             DefaultCurve.MAX,
@@ -209,9 +210,7 @@ contract CurveFactoryV2Test is Test {
             DefaultCurve.BASE_WEIGHT,
             DefaultCurve.QUOTE_WEIGHT,
             cadcOracle,
-            18,
             usdcOracle,
-            6,
             DefaultCurve.ALPHA,
             DefaultCurve.BETA,
             DefaultCurve.MAX,
@@ -234,9 +233,7 @@ contract CurveFactoryV2Test is Test {
             DefaultCurve.BASE_WEIGHT,
             DefaultCurve.QUOTE_WEIGHT,
             cadcOracle,
-            18,
             usdcOracle,
-            6,
             DefaultCurve.ALPHA,
             DefaultCurve.BETA,
             DefaultCurve.MAX,

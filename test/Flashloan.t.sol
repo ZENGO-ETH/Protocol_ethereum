@@ -15,6 +15,7 @@ import "../src/CurveFactoryV2.sol";
 import "../src/Curve.sol";
 import "../src/Structs.sol";
 import "../src/Router.sol";
+import "../src/Config.sol";
 import "../src/lib/ABDKMath64x64.sol";
 import "../src/lib/FullMath.sol";
 
@@ -65,6 +66,7 @@ contract FlashloanTest is Test {
     int128 public protocolFee = 50000;
 
     AssimilatorFactory assimilatorFactory;
+    Config config;
     CurveFactoryV2 curveFactory;
     Router router;
     Curve[fxTokenCount] dfxCurves;
@@ -82,18 +84,20 @@ contract FlashloanTest is Test {
             users[i] = new MockUser();
         }
 
+        config = new Config(protocolFee,address(multisig));
+
         assimilatorFactory = new AssimilatorFactory();
         
         curveFactory = new CurveFactoryV2(
-            protocolFee,
-            address(multisig),
-            address(assimilatorFactory)
+            address(assimilatorFactory),
+            address(config)
         );
 
         curveFactory.transferOwnership(address(multisig));
+        config.transferOwnership(address(multisig));
 
         cheats.prank(address(multisig));
-        curveFactory.setFlashable(true);
+        config.setFlashable(true);
 
         router = new Router(address(curveFactory));
         
@@ -109,9 +113,7 @@ contract FlashloanTest is Test {
                 DefaultCurve.BASE_WEIGHT,
                 DefaultCurve.QUOTE_WEIGHT,
                 foreignOracles[i],
-                foreignStables[i].decimals(),
                 usdcOracle,
-                usdc.decimals(),
                 DefaultCurve.ALPHA,
                 DefaultCurve.BETA,
                 DefaultCurve.MAX,
@@ -502,7 +504,7 @@ contract FlashloanTest is Test {
         Curve curve = dfxCurves[0];
 
         // Make it flashable
-        curveFactory.setFlashable(false);
+        config.setFlashable(false);
     }
 
     function testFail_Flashable() public {
@@ -512,7 +514,7 @@ contract FlashloanTest is Test {
 
         // Make it not flashable
         cheats.prank(address(multisig));
-        curveFactory.setFlashable(false);
+        config.setFlashable(false);
 
         uint256 dec0 = utils.tenToPowerOf(token0.decimals());
         uint256 dec1 = utils.tenToPowerOf(token1.decimals());
@@ -557,7 +559,7 @@ contract FlashloanTest is Test {
             decimal1: dec1
         });
 
-        ICurveFactory(address(curveFactory)).setGlobalFrozen(true);
+        IConfig(address(config)).setGlobalFrozen(true);
         curveFlash.initFlash(address(curve), flashData);
     }
 }

@@ -14,6 +14,7 @@ import "../src/CurveFactoryV2.sol";
 import "../src/Curve.sol";
 import "../src/Structs.sol";
 import "../src/Router.sol";
+import "../src/Config.sol";
 import "../src/lib/ABDKMath64x64.sol";
 
 import "./lib/MockUser.sol";
@@ -57,6 +58,7 @@ contract RouterTest is Test {
 
     int128 public protocolFee = 50;
 
+    Config config;
     AssimilatorFactory assimilatorFactory;
     CurveFactoryV2 curveFactory;
     Router router;
@@ -69,12 +71,13 @@ contract RouterTest is Test {
             users[i] = new MockUser();
         }
 
+        config = new Config(protocolFee,address(multisig));
+
         assimilatorFactory = new AssimilatorFactory();
         
         curveFactory = new CurveFactoryV2(
-            protocolFee,
-            address(multisig),
-            address(assimilatorFactory)
+            address(assimilatorFactory),
+            address(config)
         );
 
         router = new Router(address(curveFactory));
@@ -91,9 +94,7 @@ contract RouterTest is Test {
                 DefaultCurve.BASE_WEIGHT,
                 DefaultCurve.QUOTE_WEIGHT,
                 foreignOracles[i],
-                foreignStables[i].decimals(),
                 usdcOracle,
-                usdc.decimals(),
                 DefaultCurve.ALPHA,
                 DefaultCurve.BETA,
                 DefaultCurve.MAX,
@@ -320,13 +321,13 @@ contract RouterTest is Test {
     // Global Transactable State Frozen
     function testFail_GlobalFrozenOriginSwap() public {
         // Cannot make swaps because global state is frozen
-        ICurveFactory(address(curveFactory)).setGlobalFrozen(true);
+        IConfig(address(config)).setGlobalFrozen(true);
         routerOriginSwapAndCheck(cadc, euroc, cadcOracle, eurocOracle, 100_000);
     }
 
      function testFail_GlobalFrozenTargetSwap() public {
         // Cannot make swaps because global state is frozen
-        ICurveFactory(address(curveFactory)).setGlobalFrozen(true);
+        IConfig(address(config)).setGlobalFrozen(true);
         routerViewTargetSwapAndCheck(euroc, xsgd, usdcOracle, cadcOracle, 100_000);
     }
 }
