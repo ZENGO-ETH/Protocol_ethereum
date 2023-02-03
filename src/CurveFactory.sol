@@ -22,8 +22,9 @@ import "./Curve.sol";
 import "./interfaces/IFreeFromUpTo.sol";
 
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
-contract CurveFactory is Ownable {
+contract CurveFactory is Ownable, ReentrancyGuard {
     event NewCurve(address indexed caller, bytes32 indexed id, address indexed curve);
 
     mapping(bytes32 => address) public curves;
@@ -42,7 +43,7 @@ contract CurveFactory is Ownable {
         uint256 _quoteWeight,
         address _baseAssimilator,
         address _quoteAssimilator
-    ) public onlyOwner returns (Curve) {
+    ) public nonReentrant onlyOwner returns (Curve) {
         bytes32 curveId = keccak256(abi.encode(_baseCurrency, _quoteCurrency));
         if (curves[curveId] != address(0)) revert("CurveFactory/currency-pair-already-exists");
 

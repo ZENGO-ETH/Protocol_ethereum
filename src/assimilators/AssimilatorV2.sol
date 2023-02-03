@@ -18,19 +18,20 @@ pragma solidity ^0.8.13;
 import "../../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "../../lib/openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
+import "../../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 import "../lib/ABDKMath64x64.sol";
 import "../interfaces/IAssimilator.sol";
 import "../interfaces/IOracle.sol";
 
-contract AssimilatorV2 is IAssimilator {
+contract AssimilatorV2 is IAssimilator, ReentrancyGuard {
     using ABDKMath64x64 for int128;
     using ABDKMath64x64 for uint256;
 
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    IERC20 public constant usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    IERC20 public immutable usdc;
 
     IOracle public immutable oracle;
     IERC20 public immutable token;
@@ -48,6 +49,21 @@ contract AssimilatorV2 is IAssimilator {
         token = IERC20(_token);
         oracleDecimals = _oracleDecimals;
         tokenDecimals = _tokenDecimals;
+        usdc = IERC20(quoteAddress());
+    }
+
+    function quoteAddress () internal view returns (address) {
+        uint256 chainID;
+        assembly {
+            chainID := chainid()
+        }
+        if(chainID == 1) {
+            return 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+        }else if (chainID == 137) {
+            return 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
+        }else{
+            return address(0);
+        }
     }
 
     function getRate() public view override returns (uint256) {

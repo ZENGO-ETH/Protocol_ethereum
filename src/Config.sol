@@ -5,13 +5,14 @@ pragma experimental ABIEncoderV2;
 
 import "../lib/openzeppelin-contracts/contracts/utils/Address.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 import "./interfaces/IConfig.sol";
 
-contract Config is Ownable, IConfig {
+contract Config is Ownable, IConfig, ReentrancyGuard {
     using Address for address;
 
     // add protocol fee
-    int128 public totoalFeePercentage = 100000;
+    int128 public totalFeePercentage = 100000;
     int128 public protocolFee;
     address public protocolTreasury;
 
@@ -39,7 +40,7 @@ contract Config is Ownable, IConfig {
     constructor (
         int128 _protocolFee,
         address _treasury) {
-            require(totoalFeePercentage >= _protocolFee, "CurveFactory/fee-cant-be-over-100%");
+            require(totalFeePercentage >= _protocolFee, "CurveFactory/fee-cant-be-over-100%");
             require(_treasury != address(0), "CurveFactory/zero-address");
             protocolFee = _protocolFee;
             protocolTreasury = _treasury;
@@ -67,27 +68,27 @@ contract Config is Ownable, IConfig {
         globalFrozen = _toFreezeOrNotToFreeze;
     }
 
-    function toggleGlobalGuarded () external virtual override onlyOwner {
+    function toggleGlobalGuarded () external  virtual override onlyOwner nonReentrant {
         globalGuarded = !globalGuarded;
         emit GlobalGuardSet(globalGuarded);
     }
 
-    function setPoolGuarded (address pool, bool guarded ) external virtual override onlyOwner {
+    function setPoolGuarded (address pool, bool guarded ) external  virtual override onlyOwner nonReentrant {
         poolGuarded[pool] = guarded;
         emit PoolGuardSet(pool, guarded);
     }
 
-    function setGlobalGuardAmount (uint256 amount) external virtual override onlyOwner {
+    function setGlobalGuardAmount (uint256 amount) external  virtual override onlyOwner nonReentrant {
         globalGuardAmt = amount - 1e6;
         emit GlobalGuardAmountSet (globalGuardAmt);
     }
 
-    function setPoolCap (address pool, uint256 cap) external virtual override onlyOwner {
+    function setPoolCap (address pool, uint256 cap) external nonReentrant virtual override onlyOwner {
         poolCapAmt[pool] = cap;
         emit PoolCapSet(pool, cap);
     }
 
-    function setPoolGuardAmount (address pool, uint256 amount) external virtual override onlyOwner {
+    function setPoolGuardAmount (address pool, uint256 amount) external nonReentrant virtual override onlyOwner {
         poolGuardAmt[pool] = amount - 1e6;
         emit PoolGuardAmountSet(pool, amount);
     }
@@ -114,21 +115,21 @@ contract Config is Ownable, IConfig {
         return poolCapAmt[pool];
     }
     
-    function setFlashable(bool _toFlashOrNotToFlash) external virtual override onlyOwner {
+    function setFlashable(bool _toFlashOrNotToFlash) external  virtual override onlyOwner nonReentrant {
         emit FlashableSet(_toFlashOrNotToFlash);
 
         flashable = _toFlashOrNotToFlash;
     }
 
-    function updateProtocolTreasury(address _newTreasury) external virtual override onlyOwner {
+    function updateProtocolTreasury(address _newTreasury) external  virtual override onlyOwner nonReentrant {
         require(_newTreasury != protocolTreasury, "CurveFactory/same-treasury-address");
         require(_newTreasury != address(0), "CurveFactory/zero-address");
         protocolTreasury = _newTreasury;
         emit TreasuryUpdated(protocolTreasury);
     }
 
-    function updateProtocolFee(int128 _newFee) external virtual override onlyOwner {
-        require(totoalFeePercentage >= _newFee, "CurveFactory/fee-cant-be-over-100%");
+    function updateProtocolFee(int128 _newFee) external virtual override onlyOwner nonReentrant {
+        require(totalFeePercentage >= _newFee, "CurveFactory/fee-cant-be-over-100%");
         require(_newFee != protocolFee, "CurveFactory/same-protocol-fee");
         protocolFee = _newFee;
         emit ProtocolFeeUpdated(protocolTreasury, protocolFee);
