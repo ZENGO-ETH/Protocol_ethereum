@@ -85,8 +85,8 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
     }
 
     function newCurve(CurveInfo memory _info) public returns (Curve) {
-        require(_info._quoteCurrency == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, "CurveFactory/quote-currency-is-not-usdc");
-        require(_info._baseCurrency != 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, "CurveFactory/base-currency-is-usdc");
+        require(_info._quoteCurrency == 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, "CurveFactory/quote-currency-is-not-usdc");
+        require(_info._baseCurrency != 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, "CurveFactory/base-currency-is-usdc");
         
         require(_info._baseWeight == 5e17 && _info._quoteWeight == 5e17, "CurveFactory/weights-not-50-percent");
         
