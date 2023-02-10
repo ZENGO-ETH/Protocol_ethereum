@@ -145,7 +145,7 @@ contract AssimilatorV2 is IAssimilator, ReentrancyGuard {
         if (address(token) == address(usdc)) {
             require(amount_ >= _minQuoteAmount && amount_ <= _maxQuoteAmount, "Assimilator/LP Ratio imbalanced!");
         } else {
-            require(amount_ >= _minBaseAmount && amount_ <= _maxBaseAmount, "Assimilator/LP Ratio imbalanced!");
+            require(amount_ >= _minBaseAmount && amount_ <= _maxQuoteAmount, "Assimilator/LP Ratio imbalanced!");
         }
         token.safeTransferFrom(msg.sender, address(this), amount_);
     }

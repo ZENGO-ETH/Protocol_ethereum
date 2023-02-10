@@ -37,36 +37,24 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
     IAssimilatorFactory public immutable assimilatorFactory;
     IConfig public config;
 
-    address private USDC;
-
-    event NewCurve(
-        address indexed caller,
-        bytes32 indexed id,
-        address indexed curve
-    );
+    event NewCurve(address indexed caller, bytes32 indexed id, address indexed curve);
 
     mapping(bytes32 => address) public curves;
 
-    constructor(address _assimFactory, address _config) {
-        require(
-            _assimFactory.isContract(),
-            "CurveFactory/invalid-assimFactory"
-        );
+    constructor(
+        address _assimFactory,
+        address _config
+    ) {
+        require(_assimFactory.isContract(), "CurveFactory/invalid-assimFactory");
         assimilatorFactory = IAssimilatorFactory(_assimFactory);
         require(_config.isContract(), "CurveFactory/invalid-config");
         config = IConfig(_config);
     }
 
-    function getGlobalFrozenState()
-        external
-        view
-        virtual
-        override
-        returns (bool)
-    {
+    function getGlobalFrozenState() external view virtual override returns (bool) {
         return config.getGlobalFrozenState();
     }
-
+    
     function getFlashableState() external view virtual override returns (bool) {
         return config.getFlashableState();
     }
@@ -75,83 +63,47 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
         return config.getProtocolFee();
     }
 
-    function getProtocolTreasury()
-        public
-        view
-        virtual
-        override
-        returns (address)
-    {
+    function getProtocolTreasury() public view virtual override returns (address) {
         return config.getProtocolTreasury();
     }
 
-    function isPoolGuarded(address pool) external view override returns (bool) {
+    function isPoolGuarded (address pool) external view override returns (bool) {
         return config.isPoolGuarded(pool);
     }
 
-    function getPoolGuardAmount(address pool)
-        external
-        view
-        override
-        returns (uint256)
-    {
+    function getPoolGuardAmount (address pool) external view override returns (uint256) {
         return config.getPoolGuardAmount(pool);
     }
 
-    function getPoolCap(address pool) external view override returns (uint256) {
+    function getPoolCap (address pool) external view override returns (uint256) {
         return config.getPoolCap(pool);
     }
 
-    function getCurve(address _baseCurrency, address _quoteCurrency)
-        external
-        view
-        returns (address)
-    {
+    function getCurve(address _baseCurrency, address _quoteCurrency) external view returns (address) {
         bytes32 curveId = keccak256(abi.encode(_baseCurrency, _quoteCurrency));
         return (curves[curveId]);
     }
 
     function newCurve(CurveInfo memory _info) public returns (Curve) {
-        require(
-            _info._quoteCurrency == quoteAddress(),
-            "CurveFactory/quote-currency-is-not-usdc"
-        );
-        require(
-            _info._baseCurrency != quoteAddress(),
-            "CurveFactory/base-currency-is-usdc"
-        );
-
-        require(
-            _info._baseWeight == 5e17 && _info._quoteWeight == 5e17,
-            "CurveFactory/weights-not-50-percent"
-        );
-
+        require(_info._quoteCurrency == 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, "CurveFactory/quote-currency-is-not-usdc");
+        require(_info._baseCurrency != 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, "CurveFactory/base-currency-is-usdc");
+        
+        require(_info._baseWeight == 5e17 && _info._quoteWeight == 5e17, "CurveFactory/weights-not-50-percent");
+        
         uint256 quoteDec = IERC20Detailed(_info._quoteCurrency).decimals();
         uint256 baseDec = IERC20Detailed(_info._baseCurrency).decimals();
-
-        bytes32 curveId = keccak256(
-            abi.encode(_info._baseCurrency, _info._quoteCurrency)
-        );
+        
+        bytes32 curveId = keccak256(abi.encode(_info._baseCurrency, _info._quoteCurrency));
         if (curves[curveId] != address(0)) revert("CurveFactory/pair-exists");
         AssimilatorV2 _baseAssim;
         _baseAssim = (assimilatorFactory.getAssimilator(_info._baseCurrency));
         if (address(_baseAssim) == address(0))
-            _baseAssim = (
-                assimilatorFactory.newAssimilator(
-                    _info._baseOracle,
-                    _info._baseCurrency,
-                    baseDec
-                )
-            );
+            _baseAssim = (assimilatorFactory.newAssimilator(_info._baseOracle, _info._baseCurrency, baseDec));
         AssimilatorV2 _quoteAssim;
         _quoteAssim = (assimilatorFactory.getAssimilator(_info._quoteCurrency));
         if (address(_quoteAssim) == address(0))
             _quoteAssim = (
-                assimilatorFactory.newAssimilator(
-                    _info._quoteOracle,
-                    _info._quoteCurrency,
-                    quoteDec
-                )
+                assimilatorFactory.newAssimilator(_info._quoteOracle, _info._quoteCurrency, quoteDec)
             );
 
         address[] memory _assets = new address[](10);
@@ -176,13 +128,7 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
         _assetWeights[1] = _info._quoteWeight;
 
         // New curve
-        Curve curve = new Curve(
-            _info._name,
-            _info._symbol,
-            _assets,
-            _assetWeights,
-            address(this)
-        );
+        Curve curve = new Curve(_info._name, _info._symbol, _assets, _assetWeights, address(this));
         curve.setParams(
             _info._alpha,
             _info._beta,
@@ -196,23 +142,5 @@ contract CurveFactoryV2 is ICurveFactory, Ownable {
         emit NewCurve(msg.sender, curveId, address(curve));
 
         return curve;
-    }
-
-    function quoteAddress() internal view returns (address) {
-        if (USDC == address(0)) {
-            uint256 chainID;
-            assembly {
-                chainID := chainid()
-            }
-            if (chainID == 1) {
-                return 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-            } else if (chainID == 137) {
-                return 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
-            } else {
-                return address(0);
-            }
-        } else {
-            return USDC;
-        }
     }
 }
