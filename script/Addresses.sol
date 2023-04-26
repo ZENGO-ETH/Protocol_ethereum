@@ -33,11 +33,12 @@ library Polygon {
     uint256 public constant EURS_EPSILON = 5e14; // (0.05%)
     uint256 public constant XSGD_EPSILON = 1e15; // (0.10%)
     uint256 public constant NZDS_EPSILON = 3e15; // (0.30%)
-    uint256 public constant TRYB_EPSILON = 3e15; // (0.30%)
+    uint256 public constant TRYB_EPSILON = 1e15; // (0.10%)
 }
 
 library Mainnet {
     address public constant MULTISIG = 0x27E843260c71443b4CC8cB6bF226C3f77b9695AF;
+    address public constant CURVE_FACTORY = 0x9AdEAc3b6d29D9D5e543B8579e803a7ccE72C9cd;
 
     // Tokens
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -48,6 +49,7 @@ library Mainnet {
     address public constant TRYB = 0x2C537E5624e4af88A7ae4060C022609376C8D0EB;
     address public constant GYEN = 0xC08512927D12348F6620a698105e1BAac6EcD911;
     address public constant XIDR = 0xebF2096E01455108bAdCbAF86cE30b6e5A72aa52;
+    address public constant GBPT = 0x86B4dBE5D203e634a12364C0e428fa242A3FbA98;
 
     // Token Decimals
     uint256 public constant USDC_DECIMALS = 6;
@@ -58,6 +60,7 @@ library Mainnet {
     uint256 public constant TRYB_DECIMALS = 6;
     uint256 public constant GYEN_DECIMALS = 6;
     uint256 public constant XIDR_DECIMALS = 6;
+    uint256 public constant GBPT_DECIMALS = 18;
 
     // Oracles
     address public constant CHAINLINK_USDC_USD = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6;
@@ -68,6 +71,7 @@ library Mainnet {
     address public constant CHAINLINK_TRY_USD = 0xB09fC5fD3f11Cf9eb5E1C5Dba43114e3C9f477b5;
     address public constant CHAINLINK_YEN_USD = 0xBcE206caE7f0ec07b545EddE332A47C2F75bbeb3;
     address public constant CHAINLINK_IDR_USD = 0x91b99C9b75aF469a71eE1AB528e8da994A5D7030;
+    address public constant CHAINLINK_GBP_USD = 0x5c0Ab2d9b5a7ed9f470386e82BB36A3613cDd4b5;
 
     // Epsilon (Pool Fee)
     uint256 public constant CADC_EPSILON = 15e14; // (0.15%)
@@ -77,4 +81,28 @@ library Mainnet {
     uint256 public constant TRYB_EPSILON = 5e15; // (0.50%)
     uint256 public constant GYEN_EPSILON = 15e14; // (0.15%)
     uint256 public constant XIDR_EPSILON = 5e15; // (0.50%)
+    uint256 public constant GBPT_EPSILON = 15e14; // (0.15%) 
+}
+
+library Arbitrum {
+    address public constant MULTISIG = 0x69eb9E932A1aBAb2a17893Fa1b0D377602D2F199;
+    address public constant CURVE_FACTORY = 0x9544995B5312B26acDf09e66E699c34310b7c856;
+
+    // Tokens
+    address public constant USDC = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
+    address public constant EUROC = 0x863708032B5c328e11aBcbC0DF9D79C71Fc52a48;
+    address public constant GYEN = 0x589d35656641d6aB57A545F08cf473eCD9B6D5F7;
+    address public constant CADC = 0x2b28E826b55e399F4d4699b85f68666AC51e6f70;
+
+    // Oracles
+    address public constant CHAINLINK_USDC_USD = 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3;
+    address public constant CHAINLINK_EUR_USD = 0xA14d53bC1F1c0F31B4aA3BD109344E5009051a84;
+    address public constant CHAINLINK_YEN_USD = 0x3dD6e51CB9caE717d5a8778CF79A04029f9cFDF8;
+    address public constant CHAINLINK_CAD_USD = 0xf6DA27749484843c4F02f5Ad1378ceE723dD61d4;
+
+    // Epsilon (Pool Fee)
+    // https://data.chain.link/arbitrum/mainnet/fiat
+    uint256 public constant EUROC_EPSILON = 1e15; // (0.10%)
+    uint256 public constant GYEN_EPSILON = 3e15; // (0.30%)
+    uint256 public constant CADC_EPSILON = 3e15; // (0.30%)
 }
